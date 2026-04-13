@@ -893,10 +893,48 @@
     /* FAB, menu, eye buttons: override absolute/fixed positioning inside bottom bar */
     #exp-hud-bottom #exp-fab-wrap {
       position:static; bottom:auto; left:auto; transform:none; flex:0 0 auto;
-      display:flex; flex-direction:column; align-items:center;
+      display:flex; flex-direction:row; align-items:center; gap:0;
     }
     #exp-hud-bottom #exp-menu-btn { position:static; bottom:auto; right:auto; width:36px; height:36px; flex-shrink:0; }
     #exp-hud-bottom #exp-ui-toggle { position:static; bottom:auto; left:auto; width:28px; height:28px; flex-shrink:0; }
+    /* Bridge connector between track and discover buttons */
+    .fab-bridge {
+      width:14px; height:1.5px; flex-shrink:0;
+      background:linear-gradient(90deg, rgba(74,222,128,0.25), rgba(74,222,128,0.12));
+      transition:background 0.3s;
+    }
+    .fab-bridge.discover-active {
+      background:linear-gradient(90deg, rgba(74,222,128,0.55), rgba(56,189,248,0.4));
+      box-shadow:0 0 6px rgba(74,222,128,0.3);
+    }
+    /* Discover FAB button */
+    #fab-discover-btn {
+      width:52px; height:52px; border-radius:50%; flex-shrink:0;
+      border:1.5px solid rgba(74,222,128,0.28);
+      background:rgba(0,10,5,0.88);
+      color:rgba(74,222,128,0.8);
+      cursor:pointer; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px;
+      transition:all 0.25s; backdrop-filter:blur(8px);
+      box-shadow:0 2px 14px rgba(0,0,0,0.45), 0 0 8px rgba(74,222,128,0.07);
+      font-family:'Orbitron',sans-serif; font-size:1.1rem;
+    }
+    #fab-discover-btn .fab-label { font-size:0.38rem; letter-spacing:1px; color:rgba(74,222,128,0.55); }
+    #fab-discover-btn:hover { transform:scale(1.06); border-color:rgba(74,222,128,0.55); }
+    #fab-discover-btn:active { transform:scale(0.94); }
+    #fab-discover-btn.discover-active {
+      background:rgba(74,222,128,0.13);
+      border-color:rgba(74,222,128,0.8);
+      color:rgba(74,222,128,1);
+      box-shadow:0 0 22px rgba(74,222,128,0.45), 0 2px 14px rgba(74,222,128,0.2);
+      animation:discoverGlow 2.2s ease-in-out infinite;
+    }
+    #fab-discover-btn.discover-active .fab-label { color:rgba(74,222,128,0.85); }
+    @keyframes discoverGlow {
+      0%,100% { box-shadow:0 0 18px rgba(74,222,128,0.35), 0 2px 12px rgba(74,222,128,0.15); }
+      50%      { box-shadow:0 0 32px rgba(74,222,128,0.65), 0 2px 18px rgba(74,222,128,0.3); }
+    }
+    /* Hide old floating discover toggle — new FAB replaces it */
+    #discover-toggle { display:none !important; }
 
     /* Keep session-badge in DOM for JS, but visually hidden (stats now in HUD bottom bar) */
     #session-badge { display:none !important; }
@@ -2141,6 +2179,11 @@
       <button id="track-btn" onclick="toggleTracking()">
         <span class="fab-icon" id="fab-icon">▶</span>
         <span class="fab-label" id="fab-label">TRACK</span>
+      </button>
+      <div class="fab-bridge" id="fab-bridge"></div>
+      <button id="fab-discover-btn" onclick="toggleDiscoverMode()" title="Discover & Learn">
+        <span class="fab-icon">🔭</span>
+        <span class="fab-label">SCOUT</span>
       </button>
     </div>
     <div class="hud-stat-group right">
@@ -4822,6 +4865,10 @@ function toggleDiscoverMode() {
   discoverMode = !discoverMode;
   const btn = document.getElementById('discover-toggle');
   if (btn) btn.classList.toggle('discover-active', discoverMode);
+  const fabBtn = document.getElementById('fab-discover-btn');
+  if (fabBtn) fabBtn.classList.toggle('discover-active', discoverMode);
+  const bridge = document.getElementById('fab-bridge');
+  if (bridge) bridge.classList.toggle('discover-active', discoverMode);
   if (!discoverMode) { stopDiscoverSpeech(); dismissDiscoverCard(); }
 }
 
