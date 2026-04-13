@@ -339,6 +339,25 @@
     .nav-route-info .nav-ri-val { color:#38bdf8; }
     .nav-route-sep { color:rgba(255,255,255,0.2); }
     .nav-route-actions { display:flex; gap:10px; }
+    /* Route option cards */
+    .nav-route-options { display:flex; gap:9px; margin-bottom:14px; }
+    .nav-route-card { flex:1; padding:11px 13px; border-radius:2px; border:1px solid rgba(255,255,255,0.1); background:rgba(255,255,255,0.04); cursor:pointer; transition:all 0.18s; position:relative; overflow:hidden; }
+    .nav-route-card::before { content:''; position:absolute; inset:0; opacity:0; transition:opacity 0.18s; }
+    .nav-route-card.fastest::before { background:linear-gradient(135deg,rgba(14,165,233,0.12),transparent); }
+    .nav-route-card.explorer::before { background:linear-gradient(135deg,rgba(168,85,247,0.14),transparent); }
+    .nav-route-card.selected { border-color:rgba(14,165,233,0.6); }
+    .nav-route-card.selected::before { opacity:1; }
+    .nav-route-card.explorer.selected { border-color:rgba(168,85,247,0.65); }
+    .nrc-label { font-family:'Orbitron',sans-serif; font-size:0.6rem; font-weight:700; letter-spacing:1.5px; color:rgba(255,255,255,0.4); margin-bottom:5px; display:flex; align-items:center; gap:5px; }
+    .nrc-label .nrc-dot { width:6px; height:6px; border-radius:50%; flex-shrink:0; }
+    .nav-route-card.fastest .nrc-label .nrc-dot { background:#38bdf8; }
+    .nav-route-card.explorer .nrc-label .nrc-dot { background:#c084fc; }
+    .nav-route-card.fastest.selected .nrc-label { color:#38bdf8; }
+    .nav-route-card.explorer.selected .nrc-label { color:#c084fc; }
+    .nrc-dist { font-family:'Rajdhani',sans-serif; font-size:1.15rem; font-weight:700; color:#fff; line-height:1; }
+    .nrc-eta { font-family:'Rajdhani',sans-serif; font-size:0.82rem; color:rgba(255,255,255,0.45); margin-top:2px; }
+    .nrc-fog-badge { display:inline-block; margin-top:5px; font-family:'Orbitron',sans-serif; font-size:0.55rem; font-weight:700; letter-spacing:1px; padding:2px 6px; border-radius:2px; background:rgba(168,85,247,0.18); border:1px solid rgba(168,85,247,0.35); color:#c084fc; }
+    .nrc-fog-badge.zero { background:rgba(255,255,255,0.05); border-color:rgba(255,255,255,0.1); color:rgba(255,255,255,0.25); }
     .nav-btn-primary { flex:2; background:#0ea5e9; border:none; color:#fff; font-family:'Orbitron',sans-serif; font-size:0.7rem; font-weight:700; letter-spacing:2px; padding:13px; cursor:pointer; clip-path:polygon(12px 0,100% 0,calc(100% - 12px) 100%,0 100%); transition:background 0.15s,box-shadow 0.15s; }
     .nav-btn-primary:hover { background:#38bdf8; box-shadow:0 0 22px rgba(14,165,233,0.45); }
     .nav-btn-secondary { flex:1; background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.15); color:rgba(255,255,255,0.55); font-family:'Orbitron',sans-serif; font-size:0.65rem; font-weight:700; letter-spacing:1.5px; padding:13px; cursor:pointer; clip-path:polygon(10px 0,100% 0,calc(100% - 10px) 100%,0 100%); transition:background 0.15s,color 0.15s; }
@@ -1492,10 +1511,13 @@
   <div id="nav-preview-state">
     <div class="nav-route-panel">
       <div class="nav-route-dest" id="nav-route-dest">Destination</div>
-      <div class="nav-route-info">
-        <span class="nav-ri-val" id="nav-route-dist">—</span>
-        <span class="nav-route-sep">·</span>
-        <span class="nav-ri-val" id="nav-route-eta">—</span>
+      <div id="nav-route-options-wrap">
+        <!-- populated by navRenderRouteCards() -->
+        <div class="nav-route-info">
+          <span class="nav-ri-val" id="nav-route-dist">—</span>
+          <span class="nav-route-sep">·</span>
+          <span class="nav-ri-val" id="nav-route-eta">—</span>
+        </div>
       </div>
       <div id="nav-preview-error" style="font-family:'Rajdhani',sans-serif;font-size:0.82rem;font-weight:600;color:rgba(239,68,68,0.8);margin-bottom:10px;display:none"></div>
       <div class="nav-route-actions">
@@ -2080,9 +2102,10 @@ function startNavBgClock(){
 // NAVIGATOR — full turn-by-turn navigation
 // ============================================================
 let navMap=null, navMapInit=false;
-let navRouteLayer=null, navUserMarker=null, navDestMarker=null;
+let navRouteLayer=null, navRouteLayerAlt=null, navUserMarker=null, navDestMarker=null;
 let navSteps=[], navCurrentStep=0;
 let navRemainingDist=0, navProfile='driving';
+let navRoutes=[], navSelectedRouteIdx=0; // fog-aware routing
 let navVoiceMuted=false, navWatchId=null;
 let navNavState='search'; // 'search' | 'preview' | 'active'
 let navDestCoords=null, navDestName='';
@@ -2159,6 +2182,14 @@ function navInitMap(){
 
 function navSetState(state){
   navNavState=state;
+  // Clean up route layers when going back to search
+  if(state==='search'){
+    if(navRouteLayer){navRouteLayer.remove();navRouteLayer=null;}
+    if(navRouteLayerAlt){navRouteLayerAlt.remove();navRouteLayerAlt=null;}
+    if(navUserMarker){navUserMarker.remove();navUserMarker=null;}
+    if(navDestMarker){navDestMarker.remove();navDestMarker=null;}
+    navRoutes=[];navSelectedRouteIdx=0;
+  }
   el('nav-search-state').style.display=(state==='search')?'block':'none';
   el('nav-preview-state').style.display=(state==='preview')?'block':'none';
   el('nav-active-state').style.display=(state==='active')?'block':'none';
@@ -2259,12 +2290,49 @@ function navDecodePolyline(enc){
   return r;
 }
 
+// Score a route's polyline for unexplored tile coverage
+function navScoreRoute(coords){
+  const step=Math.max(1,Math.floor(coords.length/120)); // sample ~120 points
+  const seen=new Set();
+  let newTiles=0;
+  for(let i=0;i<coords.length;i+=step){
+    const k=tileKey(coords[i][0],coords[i][1]);
+    if(!seen.has(k)){
+      seen.add(k);
+      if(!exploredKeys.has(k)) newTiles++;
+    }
+  }
+  return {totalSampled:seen.size, newTiles};
+}
+
+// Parse a Valhalla trip object into a route record
+function navParseTrip(trip){
+  const leg=trip.legs[0];
+  const coords=navDecodePolyline(leg.shape);
+  const steps=(leg.maneuvers||[]).map(m=>({
+    instruction:m.instruction||m.verbal_pre_transition_instruction||'Continue',
+    type:m.type, distance:(m.length||0)*1000,
+    location:coords[m.begin_shape_index]?[coords[m.begin_shape_index][1],coords[m.begin_shape_index][0]]:null
+  }));
+  const score=navScoreRoute(coords);
+  return {
+    coords, steps,
+    distM:(trip.summary.length||0)*1000,
+    durationSec:trip.summary.time||0,
+    newTiles:score.newTiles,
+    totalSampled:score.totalSampled
+  };
+}
+
 async function navFetchRoute(from,to){
   el('nav-route-dist').textContent='routing…';
   el('nav-preview-error').style.display='none';
   const costing=navProfile==='cycling'?'bicycle':navProfile==='walking'?'pedestrian':'auto';
-  const body={locations:[{lon:from.lon,lat:from.lat},{lon:to.lon,lat:to.lat}],
-    costing,directions_options:{language:'en-US',units:'kilometers'}};
+  const body={
+    locations:[{lon:from.lon,lat:from.lat},{lon:to.lon,lat:to.lat}],
+    costing, alternates:2,
+    directions_options:{language:'en-US',units:'kilometers'}
+  };
   try{
     const r=await fetch('https://valhalla1.openstreetmap.de/route',
       {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
@@ -2273,34 +2341,110 @@ async function navFetchRoute(from,to){
     if(!data.trip||!data.trip.legs||!data.trip.legs.length){
       navShowError('No route found for this destination');el('nav-route-dist').textContent='—';return;
     }
-    const leg=data.trip.legs[0];
-    const coords=navDecodePolyline(leg.shape); // [[lat,lon],...]
-    // Build steps from maneuvers
-    navSteps=(leg.maneuvers||[]).map(m=>({
-      instruction:m.instruction||m.verbal_pre_transition_instruction||'Continue',
-      type:m.type, distance:(m.length||0)*1000,
-      location:coords[m.begin_shape_index]?[coords[m.begin_shape_index][1],coords[m.begin_shape_index][0]]:null
-    }));
-    navCurrentStep=0;
-    navRemainingDist=(data.trip.summary.length||0)*1000;
-    // Draw road-following route on top of beeline
-    if(navRouteLayer){navRouteLayer.remove();navRouteLayer=null;}
-    navRouteLayer=L.polyline(coords,{color:'#0ea5e9',weight:6,opacity:0.9,lineJoin:'round',lineCap:'round'}).addTo(navMap);
-    // Refresh markers above route
-    if(navUserMarker) navUserMarker.remove();
-    navUserMarker=L.circleMarker([from.lat,from.lon],{radius:9,color:'#fff',weight:2.5,fillColor:'#0ea5e9',fillOpacity:1}).addTo(navMap);
-    if(navDestMarker) navDestMarker.remove();
-    navDestMarker=L.marker([to.lat,to.lon],{icon:navPinIcon()}).addTo(navMap);
-    navMap.fitBounds(navRouteLayer.getBounds(),{padding:[80,60]});
-    el('nav-route-dist').textContent=navFmtDist(navRemainingDist);
-    el('nav-route-eta').textContent=navFmtDur(data.trip.summary.time||0);
+
+    // Parse main + alternate routes
+    const allTrips=[data.trip,...(data.alternates||[]).map(a=>a.trip||a).filter(Boolean)];
+    const parsed=allTrips.map(t=>navParseTrip(t));
+
+    // Route 0 = fastest; find best explorer route (most new tiles, must differ from fastest)
+    navRoutes=[parsed[0]]; // always include fastest
+    if(parsed.length>1){
+      const best=parsed.slice(1).reduce((a,b)=>b.newTiles>a.newTiles?b:a);
+      // Only show explorer card if it offers meaningfully more new tiles
+      if(best.newTiles>parsed[0].newTiles+2) navRoutes.push(best);
+    }
+    navSelectedRouteIdx=0;
+
+    // Draw routes on map
+    navDrawRoutes(from,to);
+    navRenderRouteCards();
   }catch(e){
-    navShowError('Routing server unreachable — straight-line shown');
+    navShowError('Routing server unreachable');
     el('nav-route-dist').textContent='—';
   }
 }
 
+function navDrawRoutes(from,to){
+  if(navRouteLayer){navRouteLayer.remove();navRouteLayer=null;}
+  if(navRouteLayerAlt){navRouteLayerAlt.remove();navRouteLayerAlt=null;}
+  if(navUserMarker) navUserMarker.remove();
+  if(navDestMarker) navDestMarker.remove();
+
+  const sel=navSelectedRouteIdx;
+  // Draw unselected route first (dim, underneath)
+  if(navRoutes.length>1){
+    const altIdx=sel===0?1:0;
+    const altColor=altIdx===0?'#0ea5e9':'#a855f7';
+    navRouteLayerAlt=L.polyline(navRoutes[altIdx].coords,
+      {color:altColor,weight:4,opacity:0.28,lineJoin:'round',lineCap:'round'}).addTo(navMap);
+  }
+  // Draw selected route on top
+  const selColor=sel===0?'#0ea5e9':'#a855f7';
+  navRouteLayer=L.polyline(navRoutes[sel].coords,
+    {color:selColor,weight:6,opacity:0.92,lineJoin:'round',lineCap:'round'}).addTo(navMap);
+
+  navUserMarker=L.circleMarker([from.lat,from.lon],
+    {radius:9,color:'#fff',weight:2.5,fillColor:sel===0?'#0ea5e9':'#a855f7',fillOpacity:1}).addTo(navMap);
+  navDestMarker=L.marker([to.lat,to.lon],{icon:navPinIcon()}).addTo(navMap);
+  navMap.fitBounds(navRouteLayer.getBounds(),{padding:[80,60]});
+}
+
+function navRenderRouteCards(){
+  const wrap=el('nav-route-options-wrap');
+  const r0=navRoutes[0];
+  if(navRoutes.length<2){
+    // Single route — fall back to simple display
+    wrap.innerHTML=`<div class="nav-route-info"><span class="nav-ri-val" id="nav-route-dist">${navFmtDist(r0.distM)}</span><span class="nav-route-sep">·</span><span class="nav-ri-val" id="nav-route-eta">${navFmtDur(r0.durationSec)}</span></div>`;
+    navSteps=r0.steps; navCurrentStep=0; navRemainingDist=r0.distM;
+    return;
+  }
+  const r1=navRoutes[1];
+  const pctNew0=r0.totalSampled?Math.round(r0.newTiles/r0.totalSampled*100):0;
+  const pctNew1=r1.totalSampled?Math.round(r1.newTiles/r1.totalSampled*100):0;
+  const detourPct=r0.distM>0?Math.round((r1.distM-r0.distM)/r0.distM*100):0;
+  const detourStr=detourPct>0?` +${detourPct}%`:'';
+
+  wrap.innerHTML=`
+    <div class="nav-route-options">
+      <div class="nav-route-card fastest${navSelectedRouteIdx===0?' selected':''}" onclick="navSelectRoute(0)">
+        <div class="nrc-label"><span class="nrc-dot"></span>FASTEST</div>
+        <div class="nrc-dist">${navFmtDist(r0.distM)}</div>
+        <div class="nrc-eta">${navFmtDur(r0.durationSec)}</div>
+        <div class="nrc-fog-badge${pctNew0===0?' zero':''}">▓ ${pctNew0}% NEW</div>
+      </div>
+      <div class="nav-route-card explorer${navSelectedRouteIdx===1?' selected':''}" onclick="navSelectRoute(1)">
+        <div class="nrc-label"><span class="nrc-dot"></span>EXPLORER</div>
+        <div class="nrc-dist">${navFmtDist(r1.distM)}<span style="font-size:0.7em;color:rgba(255,255,255,0.35)">${detourStr}</span></div>
+        <div class="nrc-eta">${navFmtDur(r1.durationSec)}</div>
+        <div class="nrc-fog-badge">▓ ${pctNew1}% NEW</div>
+      </div>
+    </div>`;
+
+  navSelectRoute(navSelectedRouteIdx, true);
+}
+
+function navSelectRoute(idx, skipRedraw){
+  navSelectedRouteIdx=idx;
+  const r=navRoutes[idx];
+  navSteps=r.steps; navCurrentStep=0; navRemainingDist=r.distM;
+  // Update card selection styles
+  document.querySelectorAll('.nav-route-card').forEach((c,i)=>{
+    c.classList.toggle('selected',i===idx);
+  });
+  // Redraw routes with new selection highlighted
+  if(!skipRedraw && navDestCoords){
+    navigator.geolocation.getCurrentPosition(
+      pos=>navDrawRoutes({lat:pos.coords.latitude,lon:pos.coords.longitude},navDestCoords),
+      ()=>{}
+    );
+  }
+}
+
 function navStartNavigation(){
+  // Remove dimmed alt route — only show the selected route during navigation
+  if(navRouteLayerAlt){navRouteLayerAlt.remove();navRouteLayerAlt=null;}
+  // Recolor route line to match selected route
+  if(navRouteLayer) navRouteLayer.setStyle({color:navSelectedRouteIdx===1?'#a855f7':'#0ea5e9'});
   navSetState('active');
   navCurrentStep=0;
   el('nav-arrived').style.display='none';
@@ -2373,9 +2517,11 @@ function navArrived(){
 function navStopNavigation(){
   if(navWatchId!=null){navigator.geolocation.clearWatch(navWatchId);navWatchId=null;}
   if(navRouteLayer){navRouteLayer.remove();navRouteLayer=null;}
+  if(navRouteLayerAlt){navRouteLayerAlt.remove();navRouteLayerAlt=null;}
   if(navUserMarker){navUserMarker.remove();navUserMarker=null;}
   if(navDestMarker){navDestMarker.remove();navDestMarker=null;}
   navSteps=[];navCurrentStep=0;navDestCoords=null;navDestName='';navRemainingDist=0;
+  navRoutes=[];navSelectedRouteIdx=0;
   navClearSearch();
   navSetState('search');
   navRenderRecent();
