@@ -710,6 +710,79 @@
     #region-add-btn { width:100%; margin-top:8px; padding:15px; border:1px solid rgba(74,222,128,0.3); border-radius:14px; font-family:'Orbitron',sans-serif; font-size:0.65rem; font-weight:700; letter-spacing:2px; cursor:pointer; background:rgba(74,222,128,0.08); color:#4ade80; transition:all 0.18s; }
     #region-add-btn:hover { background:rgba(74,222,128,0.18); }
 
+    /* ---- Region Trace Mode ---- */
+    #trace-overlay {
+      position:absolute; inset:0; z-index:1800;
+      display:none; touch-action:none; cursor:crosshair;
+    }
+    #trace-overlay.active { display:block; }
+    #trace-instructions {
+      position:absolute; top:max(calc(env(safe-area-inset-top,0px) + 64px), 72px);
+      left:50%; transform:translateX(-50%);
+      background:rgba(0,10,4,0.90); backdrop-filter:blur(12px);
+      border:1px solid rgba(74,222,128,0.3); border-radius:10px;
+      padding:10px 20px; pointer-events:none;
+      font-family:'Orbitron',sans-serif; font-size:0.58rem; letter-spacing:2px;
+      color:rgba(255,255,255,0.85); white-space:nowrap;
+      box-shadow:0 4px 20px rgba(0,0,0,0.4);
+    }
+    #trace-pt-count {
+      display:inline-block; margin-left:8px; color:rgba(74,222,128,0.7);
+    }
+    #trace-cancel-btn {
+      position:absolute; bottom:max(calc(env(safe-area-inset-bottom,0px) + 96px), 106px);
+      left:50%; transform:translateX(-50%);
+      background:rgba(0,0,0,0.75); border:1px solid rgba(248,113,113,0.4);
+      color:#f87171; font-family:'Orbitron',sans-serif;
+      font-size:0.58rem; letter-spacing:2px; padding:11px 24px;
+      border-radius:10px; cursor:pointer; backdrop-filter:blur(8px);
+    }
+    /* Region naming modal */
+    #region-name-modal {
+      position:absolute; inset:0; z-index:2600;
+      background:rgba(0,6,2,0.82); backdrop-filter:blur(10px);
+      display:none; align-items:center; justify-content:center;
+    }
+    #region-name-modal.active { display:flex; }
+    #region-name-box {
+      background:rgba(4,14,6,0.98); border:1px solid rgba(74,222,128,0.28);
+      border-radius:14px; padding:28px 22px; width:min(340px,88vw);
+      display:flex; flex-direction:column; gap:14px;
+      box-shadow:0 8px 40px rgba(0,0,0,0.6), 0 0 0 1px rgba(74,222,128,0.08);
+    }
+    #region-name-title {
+      font-family:'Orbitron',sans-serif; font-size:0.58rem;
+      letter-spacing:3px; color:rgba(255,255,255,0.4); text-align:center;
+    }
+    #region-name-preview {
+      font-family:'Rajdhani',sans-serif; font-size:0.72rem;
+      color:rgba(74,222,128,0.45); text-align:center; letter-spacing:1px;
+    }
+    #region-name-input {
+      background:rgba(255,255,255,0.05); border:1px solid rgba(74,222,128,0.28);
+      border-radius:8px; padding:13px 14px; color:#fff;
+      font-family:'Orbitron',sans-serif; font-size:0.75rem;
+      letter-spacing:1px; text-align:center; width:100%;
+      outline:none; box-sizing:border-box;
+      transition:border-color 0.15s;
+    }
+    #region-name-input:focus { border-color:rgba(74,222,128,0.65); }
+    #region-name-btns { display:flex; gap:10px; }
+    #region-name-cancel {
+      flex:1; padding:12px; background:rgba(255,255,255,0.05);
+      border:1px solid rgba(255,255,255,0.1); border-radius:8px;
+      color:rgba(255,255,255,0.4); font-family:'Orbitron',sans-serif;
+      font-size:0.52rem; letter-spacing:2px; cursor:pointer;
+    }
+    #region-name-save {
+      flex:2; padding:12px; background:rgba(74,222,128,0.16);
+      border:1px solid rgba(74,222,128,0.45); border-radius:8px;
+      color:#4ade80; font-family:'Orbitron',sans-serif;
+      font-size:0.52rem; font-weight:700; letter-spacing:2px; cursor:pointer;
+      transition:background 0.15s;
+    }
+    #region-name-save:hover { background:rgba(74,222,128,0.28); }
+
     /* ---- Offline panel ---- */
     #offline-panel { position:absolute; bottom:0; left:0; right:0; z-index:2000; background:rgba(4,12,6,0.97); backdrop-filter:blur(16px); border-top:1px solid rgba(74,222,128,0.12); border-radius:20px 20px 0 0; padding:0 20px 30px; transform:translateY(100%); transition:transform 0.35s cubic-bezier(0.32,0.72,0,1); max-height:72vh; overflow-y:auto; }
     #offline-panel.open { transform:translateY(0); }
@@ -2241,7 +2314,7 @@
     <div style="margin-top:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,0.06)">
       <div style="font-family:'Orbitron',sans-serif;font-size:0.48rem;letter-spacing:2px;color:rgba(255,255,255,0.18);margin-bottom:10px">CUSTOM REGIONS</div>
       <div id="region-list"></div>
-      <button id="region-add-btn" onclick="addCurrentViewAsRegion()">+ CAPTURE CURRENT VIEW</button>
+      <button id="region-add-btn" onclick="startRegionTrace()">✏ TRACE A REGION</button>
     </div>
   </div>
 
@@ -2274,6 +2347,25 @@
   </div>
 
   <div id="toast-container"></div>
+
+  <!-- Region trace overlay: intercepts touch/mouse during freehand drawing -->
+  <div id="trace-overlay">
+    <div id="trace-instructions">DRAW · TRACE YOUR REGION BOUNDARY<span id="trace-pt-count"></span></div>
+    <button id="trace-cancel-btn" onclick="cancelRegionTrace()">✕ CANCEL</button>
+  </div>
+
+  <!-- Region naming modal -->
+  <div id="region-name-modal">
+    <div id="region-name-box">
+      <div id="region-name-title">NAME YOUR REGION</div>
+      <div id="region-name-preview"></div>
+      <input type="text" id="region-name-input" placeholder="e.g. Trailside at Cottonwood Creek" autocomplete="off" spellcheck="false" onkeydown="if(event.key==='Enter')saveRegionName()">
+      <div id="region-name-btns">
+        <button id="region-name-cancel" onclick="cancelRegionName()">CANCEL</button>
+        <button id="region-name-save" onclick="saveRegionName()">SAVE REGION</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -3344,14 +3436,222 @@ function toggleSound(){ soundEnabled=!soundEnabled; el('sound-toggle').textConte
 
 // ---- Regions ----
 let regions=JSON.parse(localStorage.getItem('et_regions')||'[]'), regionLayers=[];
-function addCurrentViewAsRegion(){
+
+// ---- Custom Region Tracing ----
+let traceActive=false, tracePoints=[], tracePolyline=null, tracePolygon=null;
+let _marchTimer=null, _pendingPolygon=null, _traceMouseDown=false, _lastTracePx=null;
+let _currentCustomRegion=null;
+
+function getThemeMainColor(){
+  const c=getThemeColors(activeTheme);
+  return c?c.main:'#4ade80';
+}
+
+function startRegionTrace(){
   if(!map) return;
-  const b=map.getBounds();
-  const name=prompt('Name this region:',`Region ${regions.length+1}`); if(!name) return;
-  regions.push({id:Date.now(),name,sw:{lat:b.getSouth(),lng:b.getWest()},ne:{lat:b.getNorth(),lng:b.getEast()}});
+  closeRegions();
+  traceActive=true; tracePoints=[];
+  el('trace-overlay').classList.add('active');
+  el('trace-pt-count').textContent='';
+  map.dragging.disable(); map.touchZoom.disable();
+  map.scrollWheelZoom.disable(); map.doubleClickZoom.disable();
+  const ov=el('trace-overlay');
+  ov.addEventListener('touchstart',onTraceStart,{passive:false});
+  ov.addEventListener('touchmove',onTraceMove,{passive:false});
+  ov.addEventListener('touchend',onTraceEnd,{passive:false});
+  ov.addEventListener('mousedown',onTraceStart);
+  ov.addEventListener('mousemove',_onTraceMouseMove);
+  ov.addEventListener('mouseup',onTraceEnd);
+}
+
+function _removeTraceListeners(){
+  const ov=el('trace-overlay');
+  ov.removeEventListener('touchstart',onTraceStart);
+  ov.removeEventListener('touchmove',onTraceMove);
+  ov.removeEventListener('touchend',onTraceEnd);
+  ov.removeEventListener('mousedown',onTraceStart);
+  ov.removeEventListener('mousemove',_onTraceMouseMove);
+  ov.removeEventListener('mouseup',onTraceEnd);
+}
+
+function _restoreMap(){
+  if(!map) return;
+  map.dragging.enable(); map.touchZoom.enable();
+  map.scrollWheelZoom.enable(); map.doubleClickZoom.enable();
+}
+
+function cancelRegionTrace(){
+  traceActive=false; _traceMouseDown=false;
+  el('trace-overlay').classList.remove('active');
+  if(tracePolyline){map.removeLayer(tracePolyline);tracePolyline=null;}
+  if(tracePolygon){map.removeLayer(tracePolygon);tracePolygon=null;}
+  stopMarchingAnts(); tracePoints=[]; _pendingPolygon=null;
+  _removeTraceListeners(); _restoreMap();
+}
+
+function _getEventLatLng(e){
+  const mapEl=document.getElementById('map');
+  const rect=mapEl.getBoundingClientRect();
+  let cx,cy;
+  if(e.touches&&e.touches.length>0){cx=e.touches[0].clientX;cy=e.touches[0].clientY;}
+  else if(e.changedTouches&&e.changedTouches.length>0){cx=e.changedTouches[0].clientX;cy=e.changedTouches[0].clientY;}
+  else{cx=e.clientX;cy=e.clientY;}
+  const x=cx-rect.left, y=cy-rect.top;
+  return {latlng:map.containerPointToLatLng([x,y]), px:L.point(x,y)};
+}
+
+function onTraceStart(e){
+  e.preventDefault();
+  if(!traceActive) return;
+  const {latlng,px}=_getEventLatLng(e);
+  tracePoints=[latlng]; _lastTracePx=px; _traceMouseDown=true;
+  const color=getThemeMainColor();
+  if(tracePolyline){map.removeLayer(tracePolyline);}
+  tracePolyline=L.polyline([latlng],{color,weight:2.5,opacity:0.92}).addTo(map);
+}
+
+function onTraceMove(e){
+  e.preventDefault();
+  if(!traceActive||!_traceMouseDown||!tracePoints.length) return;
+  const {latlng,px}=_getEventLatLng(e);
+  if(_lastTracePx&&_lastTracePx.distanceTo(px)<7) return;
+  tracePoints.push(latlng); _lastTracePx=px;
+  if(tracePolyline) tracePolyline.setLatLngs(tracePoints);
+  el('trace-pt-count').textContent=' · '+tracePoints.length+' pts';
+}
+
+function _onTraceMouseMove(e){ if(_traceMouseDown) onTraceMove(e); }
+
+function onTraceEnd(e){
+  e.preventDefault(); _traceMouseDown=false;
+  if(!traceActive||tracePoints.length<5) return;
+  const color=getThemeMainColor();
+  if(tracePolyline){map.removeLayer(tracePolyline);tracePolyline=null;}
+  _pendingPolygon=tracePoints.map(ll=>({lat:ll.lat,lng:ll.lng}));
+  tracePolygon=L.polygon(tracePoints,{
+    color,weight:2,opacity:0.88,fillColor:color,fillOpacity:0.06,dashArray:'10 6'
+  }).addTo(map);
+  startMarchingAnts(tracePolygon);
+  el('trace-overlay').classList.remove('active');
+  _showRegionNameModal();
+}
+
+function startMarchingAnts(layer){
+  let offset=0; stopMarchingAnts();
+  _marchTimer=setInterval(()=>{
+    offset=(offset+1)%16;
+    if(layer&&layer.setStyle) layer.setStyle({dashOffset:String(offset)});
+  },40);
+}
+function stopMarchingAnts(){ if(_marchTimer){clearInterval(_marchTimer);_marchTimer=null;} }
+
+function _showRegionNameModal(){
+  const input=el('region-name-input');
+  const pts=_pendingPolygon?_pendingPolygon.length:0;
+  if(input){input.value=`Region ${regions.length+1}`; }
+  const prev=el('region-name-preview');
+  if(prev) prev.textContent=pts+' boundary points · tap to name';
+  el('region-name-modal').classList.add('active');
+  setTimeout(()=>{if(input){input.focus();input.select();}},120);
+}
+
+function cancelRegionName(){
+  el('region-name-modal').classList.remove('active');
+  if(tracePolygon){map.removeLayer(tracePolygon);tracePolygon=null;}
+  stopMarchingAnts(); _pendingPolygon=null; tracePoints=[];
+  traceActive=false; _removeTraceListeners(); _restoreMap();
+}
+
+function saveRegionName(){
+  const name=(el('region-name-input').value||'').trim();
+  if(!name){el('region-name-input').focus();return;}
+  el('region-name-modal').classList.remove('active');
+  stopMarchingAnts();
+  if(tracePolygon){map.removeLayer(tracePolygon);tracePolygon=null;}
+  const simplified=_dpSimplify(_pendingPolygon,0.000045);
+  const totalTiles=countTilesInPolygon(simplified);
+  regions.push({id:Date.now(),name,polygon:simplified,totalTiles});
   localStorage.setItem('et_regions',JSON.stringify(regions));
   drawRegionLayers(); renderRegions();
+  traceActive=false; tracePoints=[]; _pendingPolygon=null;
+  _removeTraceListeners(); _restoreMap();
 }
+
+// Douglas-Peucker simplification
+function _dpSimplify(pts,eps){
+  if(!pts||pts.length<=4) return pts||[];
+  return _dpRec(pts,eps);
+}
+function _dpRec(pts,eps){
+  if(pts.length<3) return pts;
+  let maxD=0,idx=0;
+  const f=pts[0],l=pts[pts.length-1];
+  for(let i=1;i<pts.length-1;i++){const d=_ptLineDist(pts[i],f,l);if(d>maxD){maxD=d;idx=i;}}
+  if(maxD>eps){
+    const a=_dpRec(pts.slice(0,idx+1),eps);
+    const b=_dpRec(pts.slice(idx),eps);
+    return [...a.slice(0,-1),...b];
+  }
+  return [f,l];
+}
+function _ptLineDist(p,a,b){
+  const dx=b.lat-a.lat,dy=b.lng-a.lng,len=Math.sqrt(dx*dx+dy*dy);
+  if(len===0) return Math.sqrt((p.lat-a.lat)**2+(p.lng-a.lng)**2);
+  return Math.abs(dy*p.lat-dx*p.lng+b.lng*a.lat-b.lat*a.lng)/len;
+}
+
+// Point-in-polygon (ray casting)
+function pointInPolygon(lat,lng,polygon){
+  let inside=false;
+  for(let i=0,j=polygon.length-1;i<polygon.length;j=i++){
+    const xi=polygon[i].lat,yi=polygon[i].lng,xj=polygon[j].lat,yj=polygon[j].lng;
+    if(((yi>lng)!==(yj>lng))&&(lat<(xj-xi)*(lng-yi)/(yj-yi)+xi)) inside=!inside;
+  }
+  return inside;
+}
+function _polygonBbox(polygon){
+  let minLat=Infinity,maxLat=-Infinity,minLng=Infinity,maxLng=-Infinity;
+  polygon.forEach(p=>{
+    if(p.lat<minLat)minLat=p.lat; if(p.lat>maxLat)maxLat=p.lat;
+    if(p.lng<minLng)minLng=p.lng; if(p.lng>maxLng)maxLng=p.lng;
+  });
+  return{minLat,maxLat,minLng,maxLng};
+}
+function countTilesInPolygon(polygon){
+  const bb=_polygonBbox(polygon);
+  let count=0;
+  for(let lat=Math.floor(bb.minLat/TILE_DEGREES)*TILE_DEGREES;lat<bb.maxLat;lat+=TILE_DEGREES)
+    for(let lng=Math.floor(bb.minLng/TILE_DEGREES)*TILE_DEGREES;lng<bb.maxLng;lng+=TILE_DEGREES)
+      if(pointInPolygon(lat+TILE_DEGREES/2,lng+TILE_DEGREES/2,polygon)) count++;
+  return Math.max(count,1);
+}
+function getExploredInPolygon(polygon){
+  let count=0;
+  exploredKeys.forEach(key=>{
+    const parts=key.split('_');
+    const lat=parseInt(parts[0])*TILE_DEGREES+TILE_DEGREES/2;
+    const lng=parseInt(parts[1])*TILE_DEGREES+TILE_DEGREES/2;
+    if(pointInPolygon(lat,lng,polygon)) count++;
+  });
+  return count;
+}
+
+// Check if inside a custom polygon region — takes priority over Nominatim
+function checkCustomRegionZone(lat,lng){
+  for(const r of regions){
+    if(!r.polygon) continue;
+    if(pointInPolygon(lat,lng,r.polygon)){
+      if(r.name!==_currentCustomRegion){
+        _currentCustomRegion=r.name;
+        showZoneBanner(r.name,'Your Region');
+      }
+      return true;
+    }
+  }
+  _currentCustomRegion=null;
+  return false;
+}
+
 function deleteRegion(id){
   regions=regions.filter(r=>r.id!==id);
   localStorage.setItem('et_regions',JSON.stringify(regions));
@@ -3360,22 +3660,36 @@ function deleteRegion(id){
 function drawRegionLayers(){
   regionLayers.forEach(l=>map&&map.removeLayer(l)); regionLayers=[];
   regions.forEach(r=>{
-    const rect=L.rectangle([[r.sw.lat,r.sw.lng],[r.ne.lat,r.ne.lng]],{color:'#4ade80',weight:1.5,opacity:0.55,fillColor:'#4ade80',fillOpacity:0.03,dashArray:'6,5'}).addTo(map);
-    regionLayers.push(rect);
+    let layer;
+    if(r.polygon){
+      // Polygon regions: invisible on map, show only as zone name banner
+      layer=L.polygon(r.polygon.map(p=>[p.lat,p.lng]),{
+        color:'transparent',weight:0,opacity:0,fillOpacity:0
+      }).addTo(map);
+    } else {
+      layer=L.rectangle([[r.sw.lat,r.sw.lng],[r.ne.lat,r.ne.lng]],{
+        color:'#4ade80',weight:1.5,opacity:0.55,fillColor:'#4ade80',fillOpacity:0.03,dashArray:'6,5'
+      }).addTo(map);
+    }
+    regionLayers.push(layer);
   });
 }
 function getRegionPct(r){
+  if(r.polygon){
+    return Math.min(100,(getExploredInPolygon(r.polygon)/(r.totalTiles||1))*100);
+  }
   let total=0,found=0;
-  const steps=50, latStep=(r.ne.lat-r.sw.lat)/steps, lngStep=(r.ne.lng-r.sw.lng)/steps;
+  const steps=50,latStep=(r.ne.lat-r.sw.lat)/steps,lngStep=(r.ne.lng-r.sw.lng)/steps;
   for(let lat=r.sw.lat;lat<r.ne.lat;lat+=latStep) for(let lng=r.sw.lng;lng<r.ne.lng;lng+=lngStep){total++;if(exploredKeys.has(tileKey(lat,lng)))found++;}
   return total>0?(found/total)*100:0;
 }
 function renderRegions(){
   const list=el('region-list');
-  if(!regions.length){list.innerHTML='<div id="no-regions">No regions yet. Pan the map to an area, then capture it.</div>';return;}
+  if(!regions.length){list.innerHTML='<div id="no-regions">No regions yet. Tap "TRACE A REGION" and draw a boundary on the map.</div>';return;}
   list.innerHTML=regions.map(r=>{
     const pct=getRegionPct(r).toFixed(1);
-    return `<div class="region-card"><div><div class="region-name">${r.name}</div><div class="region-bounds">${r.sw.lat.toFixed(3)}°, ${r.sw.lng.toFixed(3)}°</div></div><div style="text-align:right"><div class="region-pct-label">EXPLORED</div><div class="region-pct">${pct}%</div></div><div class="region-del" onclick="deleteRegion(${r.id})">✕</div></div>`;
+    const sub=r.polygon?`Custom · ${r.polygon.length} pts`:`${r.sw.lat.toFixed(3)}°, ${r.sw.lng.toFixed(3)}°`;
+    return `<div class="region-card"><div><div class="region-name">${r.name}</div><div class="region-bounds">${sub}</div></div><div style="text-align:right"><div class="region-pct-label">EXPLORED</div><div class="region-pct">${pct}%</div></div><div class="region-del" onclick="deleteRegion(${r.id})">✕</div></div>`;
   }).join('');
 }
 function openRegions(){ renderZones(); renderRegions(); el('region-panel').classList.add('open'); el('backdrop').classList.add('visible'); }
@@ -3697,7 +4011,7 @@ function onPosition(pos){
     flashStat('stat-explored');
   }
   if(discoverMode) checkDiscoverTrigger(lat,lng);
-  if(isTracking) detectZone(lat, lng);
+  if(isTracking){ if(!checkCustomRegionZone(lat,lng)) detectZone(lat,lng); }
   lastPt=pt;
 }
 function drawSparkline(canvas, h){
