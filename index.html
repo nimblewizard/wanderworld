@@ -905,6 +905,57 @@
     /* Coords display: hidden (GPS precision shown in status bar text) */
     #coords-display { display:none !important; }
 
+    /* ---- Zone entry banner (WoW-style) ---- */
+    #zone-banner {
+      position:absolute; left:0; right:0; top:28%; z-index:2400;
+      display:flex; flex-direction:column; align-items:center;
+      pointer-events:none; opacity:0;
+      transition:opacity 0.55s ease;
+    }
+    #zone-banner.visible { opacity:1; }
+    .zone-banner-inner {
+      background:linear-gradient(to right,
+        transparent 0%, rgba(0,8,2,0.88) 12%, rgba(0,8,2,0.94) 50%, rgba(0,8,2,0.88) 88%, transparent 100%);
+      padding:14px 48px; text-align:center; width:100%;
+    }
+    .zone-banner-pre {
+      font-family:'Orbitron',sans-serif; font-size:0.44rem; letter-spacing:4px;
+      color:rgba(74,222,128,0.6); text-transform:uppercase; margin-bottom:5px;
+    }
+    .zone-banner-rule {
+      width:52px; height:1px; background:linear-gradient(to right,transparent,rgba(74,222,128,0.55),transparent);
+      margin:0 auto 8px;
+    }
+    #zone-banner-name {
+      font-family:'Orbitron',sans-serif; font-size:1.35rem; font-weight:700;
+      color:#fff; letter-spacing:1.5px; line-height:1.2; margin-bottom:4px;
+      text-shadow:0 0 24px rgba(74,222,128,0.45), 0 0 60px rgba(74,222,128,0.15);
+    }
+    #zone-banner-type {
+      font-family:'Rajdhani',sans-serif; font-size:0.75rem; font-weight:600;
+      color:rgba(74,222,128,0.5); letter-spacing:2.5px; text-transform:uppercase;
+    }
+
+    /* ---- Stats screen: back-to-explorer button ---- */
+    #stats-back-explorer {
+      display:none; position:absolute;
+      top:max(52px, calc(env(safe-area-inset-top,0px) + 12px)); right:18px; z-index:100;
+      background:rgba(0,0,0,0.5); border:1px solid rgba(168,85,247,0.25);
+      border-radius:50px; padding:7px 16px 7px 12px;
+      font-family:'Orbitron',sans-serif; font-size:0.6rem; font-weight:700; letter-spacing:1px;
+      color:rgba(255,255,255,0.7); cursor:pointer; align-items:center; gap:6px;
+      backdrop-filter:blur(8px); transition:background 0.15s;
+    }
+    #stats-back-explorer.visible { display:flex; }
+    #stats-back-explorer:hover { background:rgba(168,85,247,0.15); }
+
+    /* ---- Zones in region panel ---- */
+    .zone-card { background:rgba(74,222,128,0.03); border:1px solid rgba(74,222,128,0.1); clip-path:polygon(12px 0,100% 0,calc(100% - 12px) 100%,0 100%); padding:12px 16px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; }
+    .zone-name { font-family:'Orbitron',sans-serif; font-size:0.6rem; font-weight:700; color:rgba(255,255,255,0.7); letter-spacing:1px; margin-bottom:2px; }
+    .zone-type-lbl { font-family:'Rajdhani',sans-serif; font-size:0.72rem; font-weight:600; color:rgba(255,255,255,0.25); }
+    .zone-pct { font-family:'Orbitron',sans-serif; font-size:1.15rem; font-weight:700; color:#4ade80; text-align:right; }
+    .zone-pct-lbl { font-family:'Orbitron',sans-serif; font-size:0.4rem; letter-spacing:1.5px; color:rgba(74,222,128,0.4); text-align:right; }
+
     /* ---- About overlay ---- */
     #about-overlay {
       position:fixed; inset:0; z-index:3000;
@@ -1735,6 +1786,7 @@
   <div id="stats-menu-bg"></div>
   <div class="stats-bg-glow"></div>
   <button class="back-btn" onclick="goHome()"><span>←</span> HOME</button>
+  <button id="stats-back-explorer" onclick="enterMode('explorer')"><span>←</span> EXPLORER</button>
   <div id="stats-scroll">
     <div class="stats-hero">
       <div class="stats-screen-label">Dashboard</div>
@@ -2064,6 +2116,16 @@
     </div>
   </div>
 
+  <!-- Zone entry banner (WoW-style) -->
+  <div id="zone-banner" aria-live="polite">
+    <div class="zone-banner-inner">
+      <div class="zone-banner-pre">Now Entering</div>
+      <div class="zone-banner-rule"></div>
+      <div id="zone-banner-name">Area</div>
+      <div id="zone-banner-type">Neighborhood</div>
+    </div>
+  </div>
+
   <!-- Bottom HUD bar: eye | dist+time | FAB | tiles+spd | menu -->
   <div id="exp-hud-bottom">
     <button id="exp-ui-toggle" onclick="toggleExpUI()" title="Toggle UI">
@@ -2111,7 +2173,7 @@
     <div id="exp-controls-row">
       <button class="btn btn-secondary" style="flex:1" onclick="openSharePanel();toggleExpControls()">SHARE</button>
       <button class="btn btn-secondary" style="flex:1" id="offline-btn" onclick="openOfflinePanel();toggleExpControls()">OFFLINE</button>
-      <button class="btn btn-secondary" style="flex:1" onclick="toggleStats();toggleExpControls()">STATS</button>
+      <button class="btn btn-secondary" style="flex:1" onclick="openStatsFromExplorer();toggleExpControls()">STATS</button>
     </div>
   </div>
   <div id="exp-controls-backdrop" onclick="toggleExpControls()" style="position:absolute;inset:0;z-index:1002;display:none;background:rgba(0,0,0,0.3)"></div>
@@ -2133,10 +2195,17 @@
 
   <div id="region-panel">
     <div id="region-handle"></div>
-    <div id="region-panel-title">MY REGIONS</div>
-    <div id="region-panel-sub">Define areas to track your exploration progress within a specific neighborhood, city, or trail system.</div>
-    <div id="region-list"></div>
-    <button id="region-add-btn" onclick="addCurrentViewAsRegion()">+ CAPTURE CURRENT MAP VIEW AS REGION</button>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
+      <div id="region-panel-title" style="margin-bottom:0">ZONES EXPLORED</div>
+      <span id="zones-count-badge" style="font-family:'Orbitron',sans-serif;font-size:0.52rem;font-weight:700;background:rgba(74,222,128,0.1);border:1px solid rgba(74,222,128,0.22);color:#4ade80;padding:3px 10px;border-radius:20px">0 zones</span>
+    </div>
+    <div id="region-panel-sub">Areas are detected automatically as you explore. Walk into a neighborhood, park, or city district to discover it.</div>
+    <div id="zone-list"></div>
+    <div style="margin-top:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,0.06)">
+      <div style="font-family:'Orbitron',sans-serif;font-size:0.48rem;letter-spacing:2px;color:rgba(255,255,255,0.18);margin-bottom:10px">CUSTOM REGIONS</div>
+      <div id="region-list"></div>
+      <button id="region-add-btn" onclick="addCurrentViewAsRegion()">+ CAPTURE CURRENT VIEW</button>
+    </div>
   </div>
 
   <div id="offline-panel">
@@ -2261,6 +2330,7 @@ function goHome(){
   if(isTracking) stopTracking();
   if(navWatchId!=null){navigator.geolocation.clearWatch(navWatchId);navWatchId=null;}
   el('theme-btn').style.display='none';
+  const sbe = el('stats-back-explorer'); if(sbe) sbe.classList.remove('visible');
   closeThemePanel();
   closeWeatherPanel();
   closeChallengesPanel();
@@ -3271,8 +3341,132 @@ function renderRegions(){
     return `<div class="region-card"><div><div class="region-name">${r.name}</div><div class="region-bounds">${r.sw.lat.toFixed(3)}°, ${r.sw.lng.toFixed(3)}°</div></div><div style="text-align:right"><div class="region-pct-label">EXPLORED</div><div class="region-pct">${pct}%</div></div><div class="region-del" onclick="deleteRegion(${r.id})">✕</div></div>`;
   }).join('');
 }
-function openRegions(){ renderRegions(); el('region-panel').classList.add('open'); el('backdrop').classList.add('visible'); }
+function openRegions(){ renderZones(); renderRegions(); el('region-panel').classList.add('open'); el('backdrop').classList.add('visible'); }
 function closeRegions(){ el('region-panel').classList.remove('open'); el('backdrop').classList.remove('visible'); }
+
+// ---- Auto Zone Detection (WoW-style) ----
+let visitedZones = JSON.parse(localStorage.getItem('et_zones') || '[]');
+let currentZoneName = null;
+let _lastZonePos = null;
+let _lastZoneTime = 0;
+let _zoneBannerTimer = null;
+
+function haverDistMeters(lat1, lng1, lat2, lng2) {
+  const R = 6371000, dLat = (lat2-lat1)*Math.PI/180, dLng = (lng2-lng1)*Math.PI/180;
+  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+async function detectZone(lat, lng) {
+  const now = Date.now();
+  // Rate-limit: max once per 45s and only if moved >150m
+  if (now - _lastZoneTime < 45000) return;
+  if (_lastZonePos && haverDistMeters(lat, lng, _lastZonePos.lat, _lastZonePos.lng) < 150) return;
+  _lastZoneTime = now;
+  _lastZonePos = { lat, lng };
+
+  try {
+    const r = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&addressdetails=1&zoom=15`,
+      { headers: { 'Accept-Language': 'en-US,en' } }
+    );
+    if (!r.ok) return;
+    const data = await r.json();
+    const addr = data.address || {};
+
+    // Pick most specific meaningful name
+    const zoneName =
+      addr.neighbourhood || addr.suburb || addr.quarter ||
+      addr.city_district  || addr.borough  ||
+      (data.type === 'park' || data.class === 'leisure' ? (data.name || addr.leisure) : null) ||
+      addr.city || addr.town || addr.village || addr.hamlet || addr.county || null;
+
+    if (!zoneName) return;
+
+    // Determine friendly type label
+    let zoneType = 'Area';
+    if (addr.neighbourhood)              zoneType = 'Neighborhood';
+    else if (addr.suburb)                zoneType = 'District';
+    else if (addr.quarter)               zoneType = 'Quarter';
+    else if (addr.city_district || addr.borough) zoneType = 'District';
+    else if (data.class === 'leisure' || data.type === 'park') zoneType = 'Park';
+    else if (data.class === 'natural')   zoneType = 'Natural Area';
+    else if (addr.city || addr.town)     zoneType = 'City';
+    else if (addr.village || addr.hamlet) zoneType = 'Village';
+    else if (addr.county)                zoneType = 'County';
+
+    if (zoneName === currentZoneName) return;
+    currentZoneName = zoneName;
+
+    // Show WoW-style banner
+    showZoneBanner(zoneName, zoneType);
+
+    // Save to visited zones if new
+    if (!visitedZones.find(z => z.name === zoneName)) {
+      const bb = data.boundingbox; // [s, n, w, e]
+      visitedZones.push({
+        name: zoneName,
+        type: zoneType,
+        bbox: bb ? { sw: { lat: parseFloat(bb[0]), lng: parseFloat(bb[2]) }, ne: { lat: parseFloat(bb[1]), lng: parseFloat(bb[3]) } } : null,
+        firstVisit: now
+      });
+      localStorage.setItem('et_zones', JSON.stringify(visitedZones));
+    }
+  } catch(e) {}
+}
+
+function showZoneBanner(name, type) {
+  const banner = el('zone-banner');
+  if (!banner) return;
+  el('zone-banner-name').textContent = name;
+  el('zone-banner-type').textContent = type;
+  clearTimeout(_zoneBannerTimer);
+  banner.classList.add('visible');
+  playZoneEntry();
+  _zoneBannerTimer = setTimeout(() => banner.classList.remove('visible'), 4200);
+}
+
+function playZoneEntry() {
+  if (!soundEnabled) return;
+  try {
+    const ac = getAudioCtx();
+    [[440,0],[554,0.18],[659,0.34],[880,0.5]].forEach(([freq,t])=>{
+      const osc=ac.createOscillator(), g=ac.createGain();
+      osc.connect(g); g.connect(ac.destination);
+      osc.type='sine'; osc.frequency.value=freq;
+      g.gain.setValueAtTime(0.07, ac.currentTime+t);
+      g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime+t+0.4);
+      osc.start(ac.currentTime+t); osc.stop(ac.currentTime+t+0.5);
+    });
+  } catch(e) {}
+}
+
+function renderZones() {
+  const list = el('zone-list');
+  const badge = el('zones-count-badge');
+  if (!list) return;
+  if (badge) badge.textContent = `${visitedZones.length} zone${visitedZones.length !== 1 ? 's' : ''}`;
+  if (!visitedZones.length) {
+    list.innerHTML = '<div id="no-regions" style="margin-bottom:0">No zones discovered yet. Start tracking to auto-detect areas.</div>';
+    return;
+  }
+  // Sort by first visit (most recent first)
+  const sorted = [...visitedZones].sort((a,b) => (b.firstVisit||0) - (a.firstVisit||0));
+  list.innerHTML = sorted.map(z => {
+    const pct = z.bbox ? getRegionPct(z.bbox).toFixed(1) : '—';
+    return `<div class="zone-card">
+      <div><div class="zone-name">${z.name}</div><div class="zone-type-lbl">${z.type}</div></div>
+      <div><div class="zone-pct-lbl">EXPLORED</div><div class="zone-pct">${pct}${pct !== '—' ? '%' : ''}</div></div>
+    </div>`;
+  }).join('');
+}
+
+// ---- Stats from Explorer ----
+function openStatsFromExplorer() {
+  const btn = el('stats-back-explorer');
+  if (btn) btn.classList.add('visible');
+  enterMode('stats');
+}
 
 // ---- State ----
 let map,locationMarker,accuracyCircle,trackPolyline;
@@ -3466,6 +3660,7 @@ function onPosition(pos){
     flashStat('stat-explored');
   }
   if(discoverMode) checkDiscoverTrigger(lat,lng);
+  if(isTracking) detectZone(lat, lng);
   lastPt=pt;
 }
 function drawSparkline(canvas, h){
@@ -5084,7 +5279,7 @@ function renderShareCanvas() {
 // ---- Explorer hide UI ----
 const EXP_HIDEABLE = [
   'exp-hud-top','exp-hud-bottom','exp-hud-left','exp-hud-right','exp-hud',
-  'discover-toggle','stats-panel','exp-controls'
+  'discover-toggle','exp-controls'
 ];
 let expUIHidden = false;
 
