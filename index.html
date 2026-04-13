@@ -2014,6 +2014,7 @@
     <div class="nav-voice-section">
       <div class="nav-voice-title">VOICE</div>
       <div id="nav-voice-list"></div>
+      <button onclick="navAnnounce('Navigation voice ready')" style="margin-top:8px;padding:5px 12px;font-family:Orbitron,sans-serif;font-size:0.48rem;letter-spacing:1px;background:rgba(14,165,233,0.1);border:1px solid rgba(14,165,233,0.25);color:rgba(255,255,255,0.5);border-radius:20px;cursor:pointer;">TEST VOICE</button>
     </div>
   </div>
 
@@ -2774,17 +2775,18 @@ function navSetLanguage(lang) {
 
 if(window.speechSynthesis){
   speechSynthesis.addEventListener('voiceschanged', navLoadVoices);
-  // Android: trigger voices to populate by speaking a silent utterance on first user interaction
+  // Android: unlock TTS on first user gesture — speak a real silent utterance and let it finish
   const _warmSpeech = () => {
     document.removeEventListener('touchstart', _warmSpeech);
     document.removeEventListener('click', _warmSpeech);
-    if(speechSynthesis.getVoices().length === 0) {
-      const u = new SpeechSynthesisUtterance(' ');
-      u.volume = 0; u.rate = 10;
-      speechSynthesis.speak(u);
-      speechSynthesis.cancel();
-    }
-    navLoadVoices();
+    const u = new SpeechSynthesisUtterance(' ');
+    u.volume = 0; u.rate = 10;
+    u.onend = u.onerror = () => navLoadVoices();
+    speechSynthesis.speak(u);
+    // Retry voice load a few times — Android can take a moment
+    setTimeout(navLoadVoices, 500);
+    setTimeout(navLoadVoices, 1500);
+    setTimeout(navLoadVoices, 3000);
   };
   document.addEventListener('touchstart', _warmSpeech, {once:true, passive:true});
   document.addEventListener('click', _warmSpeech, {once:true, passive:true});
@@ -3260,8 +3262,8 @@ function navToggleVoice(){
 
 function navAnnounce(text){
   if(navVoiceMuted||!window.speechSynthesis||!text)return;
-  // Must be synchronous from user gesture — no setTimeout or async gaps
-  window.speechSynthesis.cancel();
+  // If already speaking, cancel first — but on Android avoid cancel() when idle (it can freeze TTS)
+  if(window.speechSynthesis.speaking) window.speechSynthesis.cancel();
   window.speechSynthesis.resume();
   const u=new SpeechSynthesisUtterance(text);
   u.rate=1.0; u.pitch=1.0;
