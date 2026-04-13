@@ -526,7 +526,7 @@
     #exp-elev-canvas { display:block; width:100%; height:38px; }
 
     /* ---- Elevation badge (explorer) ---- */
-    #elev-badge { position:absolute; top:168px; left:18px; z-index:1000; background:rgba(0,0,0,0.65); border:1px solid rgba(74,222,128,0.2); clip-path:polygon(10px 0,100% 0,calc(100% - 10px) 100%,0 100%); padding:5px 14px; }
+    #elev-badge { position:absolute; top:168px; right:18px; z-index:1000; background:rgba(0,0,0,0.65); border:1px solid rgba(74,222,128,0.2); clip-path:polygon(10px 0,100% 0,calc(100% - 10px) 100%,0 100%); padding:5px 14px; }
     #elev-badge .clabel { font-family:'Orbitron',sans-serif; font-size:0.48rem; text-transform:uppercase; letter-spacing:1.5px; color:rgba(255,255,255,0.32); }
     #elev-current-val { font-family:'Orbitron',sans-serif; font-size:1.1rem; font-weight:700; color:#4ade80; line-height:1.15; }
     #elev-current-unit { font-family:'Rajdhani',sans-serif; font-size:0.7rem; color:rgba(255,255,255,0.3); margin-left:2px; }
@@ -657,7 +657,7 @@
     #wx-key-status.not-set { color:rgba(248,113,113,0.6); }
 
     /* ---- Session live badge ---- */
-    #session-badge { position:absolute; bottom:max(108px, calc(env(safe-area-inset-bottom, 28px) + 80px)); left:50%; transform:translateX(-50%); z-index:1002; background:rgba(2,15,5,0.92); backdrop-filter:blur(12px); border:1px solid rgba(74,222,128,0.2); clip-path:polygon(10px 0,100% 0,calc(100% - 10px) 100%,0 100%); padding:6px 18px; display:none; white-space:nowrap; pointer-events:none; }
+    #session-badge { position:absolute; bottom:max(112px, calc(env(safe-area-inset-bottom,28px) + 80px)); left:50%; transform:translateX(-50%); z-index:1002; background:rgba(2,15,5,0.92); backdrop-filter:blur(12px); border:1px solid rgba(74,222,128,0.2); clip-path:polygon(10px 0,100% 0,calc(100% - 10px) 100%,0 100%); padding:4px 14px; display:none; white-space:nowrap; pointer-events:none; }
     #session-badge.active { display:block; }
     .sb-label { font-family:'Orbitron',sans-serif; font-size:0.45rem; text-transform:uppercase; letter-spacing:1.5px; color:rgba(255,255,255,0.25); margin-bottom:2px; }
     .sb-val { font-family:'Orbitron',sans-serif; font-size:1.1rem; font-weight:700; color:#4ade80; }
@@ -770,7 +770,7 @@
 
     /* ---- Explorer UI toggle ---- */
     #exp-ui-toggle {
-      position:absolute; bottom:22px; left:50%; transform:translateX(-50%);
+      position:absolute; bottom:max(38px, calc(env(safe-area-inset-bottom,0px) + 14px)); left:22px;
       z-index:1010; background:rgba(0,0,0,0.42); border:1px solid rgba(255,255,255,0.12);
       border-radius:50%; width:30px; height:30px;
       display:flex; align-items:center; justify-content:center;
@@ -2243,12 +2243,22 @@ if(window.speechSynthesis){
 function navStartHeadingSensor() {
   if (navHeadingActive) return;
   navHeadingActive = true;
+  let smoothed = 0;
   const handler = (e) => {
-    if (e.webkitCompassHeading != null) navHeading = e.webkitCompassHeading;
-    else if (e.absolute && e.alpha != null) navHeading = (360 - e.alpha) % 360;
-    else if (e.alpha != null) navHeading = (360 - e.alpha) % 360;
+    let raw;
+    if (e.webkitCompassHeading != null) raw = e.webkitCompassHeading;
+    else if (e.alpha != null) raw = (360 - e.alpha) % 360;
+    else return;
+    // Smooth to avoid jitter — lerp toward new value
+    let diff = raw - smoothed;
+    if (diff > 180) diff -= 360;
+    if (diff < -180) diff += 360;
+    smoothed = (smoothed + diff * 0.2 + 360) % 360;
+    navHeading = smoothed;
+    // Rotate only the SVG inside the icon, NOT the wrapper (which has Leaflet's position transform)
     if (navUserMarker && navUserMarker._icon) {
-      navUserMarker._icon.style.transform = `rotate(${navHeading}deg)`;
+      const svg = navUserMarker._icon.querySelector('svg');
+      if (svg) svg.style.transform = `rotate(${smoothed}deg)`;
     }
   };
   window.addEventListener('deviceorientationabsolute', handler, true);
@@ -2516,7 +2526,11 @@ function navDrawRoutes(from,to){
 
   const arrowColor = sel===0 ? '#0ea5e9' : '#a855f7';
   navUserMarker = L.marker([from.lat,from.lon], {icon: navArrowIcon(arrowColor), zIndexOffset: 1000}).addTo(navMap);
-  if (navUserMarker._icon) navUserMarker._icon.querySelector('svg').style.transform = `rotate(${navHeading}deg)`;
+  // Rotate inner SVG only — never touch ._icon.style.transform (Leaflet owns that for positioning)
+  requestAnimationFrame(() => {
+    const svg = navUserMarker?._icon?.querySelector('svg');
+    if (svg) svg.style.transform = `rotate(${navHeading}deg)`;
+  });
   navStartHeadingSensor();
   navDestMarker=L.marker([to.lat,to.lon],{icon:navPinIcon()}).addTo(navMap);
   navMap.fitBounds(navRouteLayer.getBounds(),{padding:[80,60]});
@@ -2603,7 +2617,11 @@ function navStartNavigation(){
 function navUpdatePosition(pos){
   const lat=pos.coords.latitude,lon=pos.coords.longitude;
   if(navUserMarker) navUserMarker.setLatLng([lat,lon]);
-  else { navUserMarker=L.marker([lat,lon],{icon:navArrowIcon(navSelectedRouteIdx===1?'#a855f7':'#0ea5e9'),zIndexOffset:1000}).addTo(navMap); navStartHeadingSensor(); }
+  else {
+    navUserMarker=L.marker([lat,lon],{icon:navArrowIcon(navSelectedRouteIdx===1?'#a855f7':'#0ea5e9'),zIndexOffset:1000}).addTo(navMap);
+    requestAnimationFrame(()=>{const s=navUserMarker?._icon?.querySelector('svg');if(s)s.style.transform=`rotate(${navHeading}deg)`;});
+    navStartHeadingSensor();
+  }
   if(navNavState==='active') navMap.setView([lat,lon],Math.max(navMap.getZoom(),16));
   if(navDestCoords){
     navRemainingDist=navHaversine(lat,lon,navDestCoords.lat,navDestCoords.lon);
@@ -2668,12 +2686,18 @@ function navToggleVoice(){
 }
 
 function navAnnounce(text){
-  if(navVoiceMuted||!window.speechSynthesis)return;
+  if(navVoiceMuted||!window.speechSynthesis||!text)return;
   window.speechSynthesis.cancel();
+  // Android Chrome requires resume() after cancel() and a short delay before speak()
+  window.speechSynthesis.resume();
   const u=new SpeechSynthesisUtterance(text);
   u.rate=1.0; u.pitch=1.0;
+  u.lang = (navSelectedVoice ? navSelectedVoice.lang : null) || navSearchLang || 'en-US';
   if(navSelectedVoice) u.voice=navSelectedVoice;
-  window.speechSynthesis.speak(u);
+  // Android Chrome TTS bug: pauses after ~15s — keep it alive
+  const keepAlive = setInterval(()=>{ if(!window.speechSynthesis.speaking){clearInterval(keepAlive);return;} window.speechSynthesis.pause(); window.speechSynthesis.resume(); }, 10000);
+  u.onend = u.onerror = ()=>clearInterval(keepAlive);
+  setTimeout(()=>window.speechSynthesis.speak(u), 50);
 }
 
 function navSetProfile(profile){
@@ -3055,6 +3079,35 @@ function closeRegions(){ el('region-panel').classList.remove('open'); el('backdr
 
 // ---- State ----
 let map,locationMarker,accuracyCircle,trackPolyline;
+let expHeading=0;
+function expArrowIcon(color){
+  color=color||'#4ade80';
+  return L.divIcon({
+    className:'',
+    html:`<div style="width:28px;height:28px;position:relative"><svg width="28" height="28" viewBox="0 0 28 28" id="exp-arrow-svg" style="transform-origin:14px 14px;filter:drop-shadow(0 0 3px ${color})"><polygon points="14,2 20,22 14,18 8,22" fill="${color}" stroke="#000" stroke-width="1.2" stroke-linejoin="round"/></svg></div>`,
+    iconSize:[28,28],iconAnchor:[14,14]
+  });
+}
+function expStartHeadingSensor(){
+  if(expStartHeadingSensor._active)return;
+  expStartHeadingSensor._active=true;
+  let smoothed=0;
+  const h=(e)=>{
+    let raw;
+    if(e.webkitCompassHeading!=null)raw=e.webkitCompassHeading;
+    else if(e.alpha!=null)raw=(360-e.alpha)%360;
+    else return;
+    let diff=raw-smoothed; if(diff>180)diff-=360; if(diff<-180)diff+=360;
+    smoothed=(smoothed+diff*0.2+360)%360;
+    expHeading=smoothed;
+    if(locationMarker&&locationMarker._icon){
+      const s=locationMarker._icon.querySelector('svg');
+      if(s)s.style.transform=`rotate(${smoothed}deg)`;
+    }
+  };
+  window.addEventListener('deviceorientationabsolute',h,true);
+  window.addEventListener('deviceorientation',h,true);
+}
 let isTracking=false,watchId=null,exploredPts=[],exploredKeys=new Set(),trackPath=[];
 let totalDistM=0,sessionDistM=0,lastPt=null,sessionStart=null,timerHandle=null;
 let sessionElevGain=0,sessionPeakAlt=null,lastSmoothedAlt=null,altBuffer=[],altProfile=[];
@@ -3248,11 +3301,15 @@ function showElevChart(){ if(!elevChartDismissed){ el('exp-elev-chart').classLis
 function placeMarker(lat,lng,acc){
   if(locationMarker)map.removeLayer(locationMarker);if(accuracyCircle)map.removeLayer(accuracyCircle);
   accuracyCircle=L.circle([lat,lng],{radius:acc,className:'accuracy-circle',interactive:false}).addTo(map);
-  locationMarker=L.circleMarker([lat,lng],{radius:8,fillColor:ACTIVITY_COLORS[activityType],color:'#000',weight:2,fillOpacity:1,zIndexOffset:1000}).addTo(map);
+  locationMarker=L.marker([lat,lng],{icon:expArrowIcon(ACTIVITY_COLORS[activityType]),zIndexOffset:1000}).addTo(map);
+  requestAnimationFrame(()=>{const s=locationMarker?._icon?.querySelector('svg');if(s)s.style.transform=`rotate(${expHeading}deg)`;});
+  expStartHeadingSensor();
 }
 function updateMarker(lat,lng,acc){
-  if(locationMarker){locationMarker.setLatLng([lat,lng]);if(accuracyCircle){accuracyCircle.setLatLng([lat,lng]);accuracyCircle.setRadius(acc);}}
-  else placeMarker(lat,lng,acc);
+  if(locationMarker){
+    locationMarker.setLatLng([lat,lng]);
+    if(accuracyCircle){accuracyCircle.setLatLng([lat,lng]);accuracyCircle.setRadius(acc);}
+  } else placeMarker(lat,lng,acc);
 }
 
 // ---- Stats / achievements / history ----
