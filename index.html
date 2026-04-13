@@ -515,8 +515,7 @@
     #elev-canvas { display:block; width:100%; height:46px; }
 
     /* ---- Explorer live elevation chart overlay ---- */
-    #exp-elev-chart { position:absolute; z-index:1000; background:rgba(2,10,4,0.82); backdrop-filter:blur(8px); border:1px solid rgba(249,115,22,0.2); border-radius:10px; padding:8px 10px 7px; width:148px; display:none; touch-action:none; }
-    #exp-elev-chart.tracking { display:block; }
+    #exp-elev-chart { display:none !important; }
     #exp-elev-chart-header { display:flex; align-items:baseline; justify-content:space-between; margin-bottom:5px; }
     #exp-elev-chart-label { font-family:'Orbitron',sans-serif; font-size:0.42rem; letter-spacing:1.5px; color:rgba(255,255,255,0.25); }
     #exp-elev-gain-live { font-family:'Orbitron',sans-serif; font-size:0.72rem; font-weight:700; color:#fb923c; }
@@ -4598,8 +4597,6 @@ function makePinchable(elem) {
   const H = window.innerHeight;
   // global widgets
   makeDraggable(document.getElementById('theme-btn'),         W - 54,               52);
-  // explorer UI — live elevation chart overlay (still draggable)
-  makeDraggable(document.getElementById('exp-elev-chart'),    16,                   H - 290);
   // explorer UI — left-center zoom
   makeDraggable(document.getElementById('map-zoom'),          16,                   Math.round(H / 2) - 40);
   // explorer UI — stats panel (detailed, pinchable)
@@ -5087,7 +5084,7 @@ function renderShareCanvas() {
 // ---- Explorer hide UI ----
 const EXP_HIDEABLE = [
   'exp-hud-top','exp-hud-bottom','exp-hud-left','exp-hud-right','exp-hud',
-  'discover-toggle','exp-elev-chart','stats-panel','exp-controls'
+  'discover-toggle','stats-panel','exp-controls'
 ];
 let expUIHidden = false;
 
