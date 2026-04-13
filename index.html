@@ -5115,6 +5115,30 @@ const THEME_DEFS = {
   arctic: {
     day:   { main:'#38bdf8', light:'#7dd3fc', dr:'56,189,248'   },
     night: { main:'#818cf8', light:'#a5b4fc', dr:'129,140,248'  }
+  },
+  neon: {
+    day:   { main:'#a3e635', light:'#bef264', dr:'163,230,53'   },
+    night: { main:'#e879f9', light:'#f0abfc', dr:'232,121,249'  }
+  },
+  ocean: {
+    day:   { main:'#06b6d4', light:'#22d3ee', dr:'6,182,212'    },
+    night: { main:'#3b82f6', light:'#93c5fd', dr:'59,130,246'   }
+  },
+  forest: {
+    day:   { main:'#16a34a', light:'#4ade80', dr:'22,163,74'    },
+    night: { main:'#059669', light:'#34d399', dr:'5,150,105'    }
+  },
+  crimson: {
+    day:   { main:'#f43f5e', light:'#fb7185', dr:'244,63,94'    },
+    night: { main:'#9f1239', light:'#f43f5e', dr:'159,18,57'    }
+  },
+  violet: {
+    day:   { main:'#8b5cf6', light:'#a78bfa', dr:'139,92,246'   },
+    night: { main:'#ec4899', light:'#f472b6', dr:'236,72,153'   }
+  },
+  solar: {
+    day:   { main:'#fbbf24', light:'#fde68a', dr:'251,191,36'   },
+    night: { main:'#f97316', light:'#fdba74', dr:'249,115,22'   }
   }
 };
 
@@ -6372,6 +6396,54 @@ function handleAboutClick(e){
         <div class="theme-swatches">
           <div class="theme-swatch-wrap"><div class="theme-swatch" style="background:linear-gradient(135deg,#38bdf8,#67e8f9)"></div><div class="theme-swatch-label">DAY</div></div>
           <div class="theme-swatch-wrap"><div class="theme-swatch" style="background:linear-gradient(135deg,#818cf8,#6366f1)"></div><div class="theme-swatch-label">NIGHT</div></div>
+        </div>
+        <div class="theme-check">✓</div>
+      </div>
+      <div class="theme-option" data-theme="neon" onclick="selectTheme('neon')">
+        <div class="theme-option-name">NEON</div>
+        <div class="theme-swatches">
+          <div class="theme-swatch-wrap"><div class="theme-swatch" style="background:linear-gradient(135deg,#a3e635,#bef264)"></div><div class="theme-swatch-label">DAY</div></div>
+          <div class="theme-swatch-wrap"><div class="theme-swatch" style="background:linear-gradient(135deg,#e879f9,#c026d3)"></div><div class="theme-swatch-label">NIGHT</div></div>
+        </div>
+        <div class="theme-check">✓</div>
+      </div>
+      <div class="theme-option" data-theme="ocean" onclick="selectTheme('ocean')">
+        <div class="theme-option-name">OCEAN</div>
+        <div class="theme-swatches">
+          <div class="theme-swatch-wrap"><div class="theme-swatch" style="background:linear-gradient(135deg,#06b6d4,#22d3ee)"></div><div class="theme-swatch-label">DAY</div></div>
+          <div class="theme-swatch-wrap"><div class="theme-swatch" style="background:linear-gradient(135deg,#3b82f6,#93c5fd)"></div><div class="theme-swatch-label">NIGHT</div></div>
+        </div>
+        <div class="theme-check">✓</div>
+      </div>
+      <div class="theme-option" data-theme="forest" onclick="selectTheme('forest')">
+        <div class="theme-option-name">FOREST</div>
+        <div class="theme-swatches">
+          <div class="theme-swatch-wrap"><div class="theme-swatch" style="background:linear-gradient(135deg,#16a34a,#4ade80)"></div><div class="theme-swatch-label">DAY</div></div>
+          <div class="theme-swatch-wrap"><div class="theme-swatch" style="background:linear-gradient(135deg,#059669,#34d399)"></div><div class="theme-swatch-label">NIGHT</div></div>
+        </div>
+        <div class="theme-check">✓</div>
+      </div>
+      <div class="theme-option" data-theme="crimson" onclick="selectTheme('crimson')">
+        <div class="theme-option-name">CRIMSON</div>
+        <div class="theme-swatches">
+          <div class="theme-swatch-wrap"><div class="theme-swatch" style="background:linear-gradient(135deg,#f43f5e,#fb7185)"></div><div class="theme-swatch-label">DAY</div></div>
+          <div class="theme-swatch-wrap"><div class="theme-swatch" style="background:linear-gradient(135deg,#9f1239,#f43f5e)"></div><div class="theme-swatch-label">NIGHT</div></div>
+        </div>
+        <div class="theme-check">✓</div>
+      </div>
+      <div class="theme-option" data-theme="violet" onclick="selectTheme('violet')">
+        <div class="theme-option-name">VIOLET</div>
+        <div class="theme-swatches">
+          <div class="theme-swatch-wrap"><div class="theme-swatch" style="background:linear-gradient(135deg,#8b5cf6,#a78bfa)"></div><div class="theme-swatch-label">DAY</div></div>
+          <div class="theme-swatch-wrap"><div class="theme-swatch" style="background:linear-gradient(135deg,#ec4899,#f472b6)"></div><div class="theme-swatch-label">NIGHT</div></div>
+        </div>
+        <div class="theme-check">✓</div>
+      </div>
+      <div class="theme-option" data-theme="solar" onclick="selectTheme('solar')">
+        <div class="theme-option-name">SOLAR</div>
+        <div class="theme-swatches">
+          <div class="theme-swatch-wrap"><div class="theme-swatch" style="background:linear-gradient(135deg,#fbbf24,#fde68a)"></div><div class="theme-swatch-label">DAY</div></div>
+          <div class="theme-swatch-wrap"><div class="theme-swatch" style="background:linear-gradient(135deg,#f97316,#fdba74)"></div><div class="theme-swatch-label">NIGHT</div></div>
         </div>
         <div class="theme-check">✓</div>
       </div>
