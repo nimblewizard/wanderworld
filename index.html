@@ -2066,12 +2066,6 @@
     </div>
   </div>
 
-  <!-- Map zoom controls -->
-  <div id="map-zoom">
-    <button onclick="map&&map.zoomIn()">+</button>
-    <button onclick="map&&map.zoomOut()">−</button>
-  </div>
-
   <!-- Live elevation chart overlay (shown while tracking, dismissable) -->
   <div id="exp-elev-chart">
     <div id="exp-elev-chart-header">
@@ -4792,8 +4786,6 @@ function makePinchable(elem) {
   const H = window.innerHeight;
   // global widgets
   makeDraggable(document.getElementById('theme-btn'),         W - 54,               52);
-  // explorer UI — left-center zoom
-  makeDraggable(document.getElementById('map-zoom'),          16,                   Math.round(H / 2) - 40);
   // explorer UI — stats panel (detailed, pinchable)
   makeDraggable(document.getElementById('stats-panel'),       Math.round(W/2) - 110, H - 260);
   makeDraggable(document.getElementById('discover-toggle'),   W - 58,               72);
