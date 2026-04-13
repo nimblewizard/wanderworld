@@ -2237,25 +2237,50 @@ function navSetLanguage(lang) {
 }
 
 if(window.speechSynthesis){
-  speechSynthesis.addEventListener('voiceschanged',navLoadVoices);
+  speechSynthesis.addEventListener('voiceschanged', navLoadVoices);
+  // Android: trigger voices to populate by speaking a silent utterance on first user interaction
+  const _warmSpeech = () => {
+    document.removeEventListener('touchstart', _warmSpeech);
+    document.removeEventListener('click', _warmSpeech);
+    if(speechSynthesis.getVoices().length === 0) {
+      const u = new SpeechSynthesisUtterance(' ');
+      u.volume = 0; u.rate = 10;
+      speechSynthesis.speak(u);
+      speechSynthesis.cancel();
+    }
+    navLoadVoices();
+  };
+  document.addEventListener('touchstart', _warmSpeech, {once:true, passive:true});
+  document.addEventListener('click', _warmSpeech, {once:true, passive:true});
 }
 
 function navStartHeadingSensor() {
   if (navHeadingActive) return;
   navHeadingActive = true;
-  let smoothed = 0;
+  let smoothed = 0, lastUpdate = 0;
+  // Prefer deviceorientationabsolute (Android); fall back to deviceorientation (iOS webkitCompassHeading)
+  let hasAbsolute = false;
   const handler = (e) => {
+    // Deduplicate: skip deviceorientation if absolute is available
+    if (!e.absolute && !e.webkitCompassHeading && hasAbsolute) return;
+    if (e.absolute) hasAbsolute = true;
     let raw;
     if (e.webkitCompassHeading != null) raw = e.webkitCompassHeading;
     else if (e.alpha != null) raw = (360 - e.alpha) % 360;
     else return;
-    // Smooth to avoid jitter — lerp toward new value
+    // Throttle to max 8 updates/sec
+    const now = Date.now();
+    if (now - lastUpdate < 125) return;
+    lastUpdate = now;
+    // Smooth heavily — lerp 5% per update toward target
     let diff = raw - smoothed;
     if (diff > 180) diff -= 360;
     if (diff < -180) diff += 360;
-    smoothed = (smoothed + diff * 0.2 + 360) % 360;
+    // Deadband: ignore changes under 2 degrees
+    if (Math.abs(diff) < 2) return;
+    smoothed = (smoothed + diff * 0.05 + 360) % 360;
     navHeading = smoothed;
-    // Rotate only the SVG inside the icon, NOT the wrapper (which has Leaflet's position transform)
+    // Rotate only the SVG inside — never touch ._icon.style.transform (Leaflet owns it)
     if (navUserMarker && navUserMarker._icon) {
       const svg = navUserMarker._icon.querySelector('svg');
       if (svg) svg.style.transform = `rotate(${smoothed}deg)`;
@@ -2469,38 +2494,50 @@ async function navFetchRoute(from,to){
   el('nav-route-dist').textContent='routing…';
   el('nav-preview-error').style.display='none';
   const costing=navProfile==='cycling'?'bicycle':navProfile==='walking'?'pedestrian':'auto';
-  const body={
-    locations:[{lon:from.lon,lat:from.lat},{lon:to.lon,lat:to.lat}],
-    costing, alternates:2,
-    directions_options:{language:'en-US',units:'kilometers'}
-  };
-  try{
+
+  // Helper: call Valhalla and return parsed data, throws on failure
+  const callValhalla = async (withAlternates) => {
+    const body={
+      locations:[{lon:from.lon,lat:from.lat},{lon:to.lon,lat:to.lat}],
+      costing,
+      directions_options:{language:'en-US',units:'kilometers'}
+    };
+    if(withAlternates) body.alternates=2;
     const r=await fetch('https://valhalla1.openstreetmap.de/route',
       {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
-    if(!r.ok){navShowError(`Routing error ${r.status}`);el('nav-route-dist').textContent='—';return;}
-    const data=await r.json();
+    if(!r.ok) throw new Error(`HTTP ${r.status}`);
+    return r.json();
+  };
+
+  try{
+    let data;
+    try {
+      data = await callValhalla(true);  // try with alternates first
+    } catch(e) {
+      data = await callValhalla(false); // fall back to single route
+    }
+
     if(!data.trip||!data.trip.legs||!data.trip.legs.length){
-      navShowError('No route found for this destination');el('nav-route-dist').textContent='—';return;
+      navShowError('No route found for this destination');
+      el('nav-route-dist').textContent='—'; return;
     }
 
     // Parse main + alternate routes
     const allTrips=[data.trip,...(data.alternates||[]).map(a=>a.trip||a).filter(Boolean)];
     const parsed=allTrips.map(t=>navParseTrip(t));
 
-    // Route 0 = fastest; find best explorer route (most new tiles, must differ from fastest)
-    navRoutes=[parsed[0]]; // always include fastest
+    // Route 0 = fastest; find best explorer route (most new tiles)
+    navRoutes=[parsed[0]];
     if(parsed.length>1){
       const best=parsed.slice(1).reduce((a,b)=>b.newTiles>a.newTiles?b:a);
-      // Only show explorer card if it offers meaningfully more new tiles
       if(best.newTiles>parsed[0].newTiles+2) navRoutes.push(best);
     }
     navSelectedRouteIdx=0;
 
-    // Draw routes on map
     navDrawRoutes(from,to);
     navRenderRouteCards();
   }catch(e){
-    navShowError('Routing server unreachable');
+    navShowError('Routing server unreachable — check connection');
     el('nav-route-dist').textContent='—';
   }
 }
@@ -2687,17 +2724,20 @@ function navToggleVoice(){
 
 function navAnnounce(text){
   if(navVoiceMuted||!window.speechSynthesis||!text)return;
+  // Must be synchronous from user gesture — no setTimeout or async gaps
   window.speechSynthesis.cancel();
-  // Android Chrome requires resume() after cancel() and a short delay before speak()
   window.speechSynthesis.resume();
   const u=new SpeechSynthesisUtterance(text);
   u.rate=1.0; u.pitch=1.0;
   u.lang = (navSelectedVoice ? navSelectedVoice.lang : null) || navSearchLang || 'en-US';
   if(navSelectedVoice) u.voice=navSelectedVoice;
   // Android Chrome TTS bug: pauses after ~15s — keep it alive
-  const keepAlive = setInterval(()=>{ if(!window.speechSynthesis.speaking){clearInterval(keepAlive);return;} window.speechSynthesis.pause(); window.speechSynthesis.resume(); }, 10000);
+  const keepAlive = setInterval(()=>{
+    if(!window.speechSynthesis.speaking){clearInterval(keepAlive);return;}
+    window.speechSynthesis.pause(); window.speechSynthesis.resume();
+  }, 10000);
   u.onend = u.onerror = ()=>clearInterval(keepAlive);
-  setTimeout(()=>window.speechSynthesis.speak(u), 50);
+  window.speechSynthesis.speak(u);
 }
 
 function navSetProfile(profile){
@@ -3091,14 +3131,18 @@ function expArrowIcon(color){
 function expStartHeadingSensor(){
   if(expStartHeadingSensor._active)return;
   expStartHeadingSensor._active=true;
-  let smoothed=0;
+  let smoothed=0, lastUpdate=0, hasAbsolute=false;
   const h=(e)=>{
+    if(!e.absolute&&!e.webkitCompassHeading&&hasAbsolute)return;
+    if(e.absolute)hasAbsolute=true;
     let raw;
     if(e.webkitCompassHeading!=null)raw=e.webkitCompassHeading;
     else if(e.alpha!=null)raw=(360-e.alpha)%360;
     else return;
+    const now=Date.now(); if(now-lastUpdate<125)return; lastUpdate=now;
     let diff=raw-smoothed; if(diff>180)diff-=360; if(diff<-180)diff+=360;
-    smoothed=(smoothed+diff*0.2+360)%360;
+    if(Math.abs(diff)<2)return;
+    smoothed=(smoothed+diff*0.05+360)%360;
     expHeading=smoothed;
     if(locationMarker&&locationMarker._icon){
       const s=locationMarker._icon.querySelector('svg');
