@@ -1340,6 +1340,43 @@
     .settings-action-btn:hover { background:rgba(255,255,255,0.08); color:rgba(255,255,255,0.9); }
     .settings-action-btn.danger { color:#f87171; border-color:rgba(248,113,113,0.16); }
     .settings-action-btn.danger:hover { background:rgba(248,113,113,0.1); }
+    /* Fog reset inline confirmation */
+    #reset-fog-confirm {
+      display:none; margin-top:2px;
+      background:rgba(248,113,113,0.06); border:1px solid rgba(248,113,113,0.18);
+      border-radius:10px; padding:14px 14px 12px; overflow:hidden;
+    }
+    #reset-fog-confirm.visible { display:block; }
+    #reset-fog-warning {
+      font-family:'Rajdhani',sans-serif; font-size:0.82rem; font-weight:600;
+      color:rgba(248,113,113,0.75); line-height:1.5; margin-bottom:12px;
+    }
+    #reset-fog-warning strong {
+      display:block; font-family:'Orbitron',sans-serif;
+      font-size:0.52rem; letter-spacing:2px; color:#f87171; margin-bottom:5px;
+    }
+    #reset-fog-btns { display:flex; gap:8px; }
+    #reset-cancel-btn {
+      flex:1; padding:11px; background:rgba(255,255,255,0.05);
+      border:1px solid rgba(255,255,255,0.1); border-radius:8px;
+      color:rgba(255,255,255,0.45); font-family:'Orbitron',sans-serif;
+      font-size:0.5rem; letter-spacing:2px; cursor:pointer; transition:all 0.15s;
+    }
+    #reset-cancel-btn:hover { background:rgba(255,255,255,0.1); color:rgba(255,255,255,0.75); }
+    #reset-hold-btn {
+      flex:2; position:relative; overflow:hidden; padding:11px 14px;
+      border:1px solid rgba(248,113,113,0.35); border-radius:8px;
+      background:rgba(248,113,113,0.08); color:#f87171;
+      font-family:'Orbitron',sans-serif; font-size:0.5rem; letter-spacing:2px;
+      cursor:pointer; user-select:none; -webkit-user-select:none;
+      transition:border-color 0.15s;
+    }
+    #reset-hold-btn:hover { border-color:rgba(248,113,113,0.55); }
+    #reset-hold-fill {
+      position:absolute; left:0; top:0; bottom:0; width:0%;
+      background:rgba(248,113,113,0.28); pointer-events:none;
+    }
+    #reset-hold-label { position:relative; z-index:1; pointer-events:none; }
     /* About */
     .settings-about-text {
       font-family:'Rajdhani',sans-serif; font-size:0.82rem; font-weight:600;
@@ -5245,11 +5282,51 @@ function exportExploredData() {
   a.click();
   URL.revokeObjectURL(a.href);
 }
+let _resetHoldRaf = null, _resetHoldStart = null;
+
 function confirmResetFog() {
-  if (!confirm('Reset all fog of war data? This cannot be undone.')) return;
+  const confirm = el('reset-fog-confirm');
+  const trigger = el('reset-fog-trigger');
+  if (confirm) confirm.classList.add('visible');
+  if (trigger) trigger.style.display = 'none';
+  // Scroll to show the confirmation within the panel
+  setTimeout(() => { if (confirm) confirm.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }, 50);
+}
+function cancelResetFog() {
+  el('reset-fog-confirm').classList.remove('visible');
+  el('reset-fog-trigger').style.display = 'block';
+  stopResetHold();
+}
+function startResetHold(e) {
+  e.preventDefault();
+  _resetHoldStart = Date.now();
+  _tickResetHold();
+}
+function _tickResetHold() {
+  const elapsed = Date.now() - (_resetHoldStart || Date.now());
+  const pct = Math.min(100, (elapsed / 5000) * 100);
+  const fill = el('reset-hold-fill');
+  const label = el('reset-hold-label');
+  if (fill) fill.style.width = pct + '%';
+  const secs = Math.ceil((5000 - elapsed) / 1000);
+  if (label) label.textContent = pct >= 100 ? 'RESETTING…' : `HOLD TO RESET · ${secs}s`;
+  if (pct >= 100) { _executeResetFog(); return; }
+  _resetHoldRaf = requestAnimationFrame(_tickResetHold);
+}
+function stopResetHold() {
+  if (_resetHoldRaf) { cancelAnimationFrame(_resetHoldRaf); _resetHoldRaf = null; }
+  _resetHoldStart = null;
+  const fill = el('reset-hold-fill');
+  const label = el('reset-hold-label');
+  if (fill) { fill.style.transition = 'width 0.25s ease'; fill.style.width = '0%'; setTimeout(() => { if(fill) fill.style.transition = ''; }, 300); }
+  if (label) label.textContent = 'HOLD TO RESET';
+}
+function _executeResetFog() {
+  stopResetHold();
   exploredPts = []; exploredKeys = new Set();
   localStorage.removeItem('et_explored');
   if (typeof drawFog === 'function') drawFog();
+  cancelResetFog();
   closeSettings();
 }
 
@@ -6318,7 +6395,22 @@ function handleAboutClick(e){
   <div class="settings-section">
     <div class="settings-section-label">DATA</div>
     <button class="settings-action-btn" onclick="exportExploredData()">⬇ Export Explored Data</button>
-    <button class="settings-action-btn danger" onclick="confirmResetFog()">⚠ Reset Fog of War</button>
+    <button class="settings-action-btn danger" id="reset-fog-trigger" onclick="confirmResetFog()">⚠ Reset Fog of War</button>
+    <div id="reset-fog-confirm">
+      <div id="reset-fog-warning">
+        <strong>⚠ ARE YOU SURE?</strong>
+        All explored tiles will be permanently erased. Your map goes dark again. This cannot be undone.
+      </div>
+      <div id="reset-fog-btns">
+        <button id="reset-cancel-btn" onclick="cancelResetFog()">CANCEL</button>
+        <button id="reset-hold-btn"
+          onmousedown="startResetHold(event)" onmouseup="stopResetHold()" onmouseleave="stopResetHold()"
+          ontouchstart="startResetHold(event)" ontouchend="stopResetHold()" ontouchcancel="stopResetHold()">
+          <div id="reset-hold-fill"></div>
+          <span id="reset-hold-label">HOLD TO RESET</span>
+        </button>
+      </div>
+    </div>
   </div>
 
   <!-- About -->
