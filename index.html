@@ -2015,6 +2015,7 @@
       <div class="nav-voice-title">VOICE</div>
       <div id="nav-voice-list"></div>
       <button onclick="navTestAndLoadVoices()" style="margin-top:8px;padding:5px 12px;font-family:Orbitron,sans-serif;font-size:0.48rem;letter-spacing:1px;background:rgba(14,165,233,0.1);border:1px solid rgba(14,165,233,0.25);color:rgba(255,255,255,0.5);border-radius:20px;cursor:pointer;">TEST VOICE</button>
+      <div id="nav-voice-debug" style="margin-top:4px;font-family:Rajdhani,sans-serif;font-size:0.65rem;color:rgba(255,255,255,0.2);text-align:center;"></div>
     </div>
   </div>
 
@@ -2736,10 +2737,13 @@ function navCycleLayer(){
 function navLoadVoices(){
   if(!window.speechSynthesis) return;
   const list=el('nav-voice-list');
+  const dbg=el('nav-voice-debug');
+  const allVoices = speechSynthesis.getVoices();
+  if(dbg) dbg.textContent = allVoices.length ? `${allVoices.length} voices available` : 'no voices yet';
   if(!list) return;
   const lang = navSearchLang || 'en';
-  let voices = speechSynthesis.getVoices().filter(v => v.lang.toLowerCase().startsWith(lang.toLowerCase()));
-  if (!voices.length) voices = speechSynthesis.getVoices().slice(0, 8);
+  let voices = allVoices.filter(v => v.lang.toLowerCase().startsWith(lang.toLowerCase()));
+  if (!voices.length) voices = allVoices.slice(0, 8);
   if(!voices.length){
     list.innerHTML='<div style="font-family:Rajdhani,sans-serif;font-size:0.75rem;color:rgba(255,255,255,0.3);padding:4px 0">Loading voices…</div>';
     return;
@@ -2777,24 +2781,26 @@ function navSetLanguage(lang) {
 
 if(window.speechSynthesis){
   speechSynthesis.addEventListener('voiceschanged', navLoadVoices);
-  // Poll for voices — Android Chrome can take several seconds to load them
+  // Poll for voices — Android Chrome can take many seconds to load them
   let _voicePollCount = 0;
   const _pollVoices = () => {
     if(speechSynthesis.getVoices().length > 0){ navLoadVoices(); return; }
-    if(++_voicePollCount < 20) setTimeout(_pollVoices, 500);
+    if(++_voicePollCount < 60) setTimeout(_pollVoices, 500);
   };
   setTimeout(_pollVoices, 200);
-  // Android: unlock TTS on first user gesture
+  // Android: unlock TTS on first user gesture — must be audible (volume=0 doesn't trigger voice loading)
   const _warmSpeech = () => {
     document.removeEventListener('touchstart', _warmSpeech);
     document.removeEventListener('click', _warmSpeech);
-    const u = new SpeechSynthesisUtterance(' ');
-    u.volume = 0; u.rate = 10;
-    u.onend = u.onerror = () => { navLoadVoices(); };
+    const u = new SpeechSynthesisUtterance('.');
+    u.volume = 0.01; u.rate = 1;
+    u.onend = u.onerror = () => { navLoadVoices(); setTimeout(_pollVoices, 100); };
     speechSynthesis.speak(u);
     // Reset poll after gesture — voices may appear now
     _voicePollCount = 0;
-    setTimeout(_pollVoices, 300);
+    setTimeout(_pollVoices, 200);
+    setTimeout(_pollVoices, 700);
+    setTimeout(_pollVoices, 1500);
   };
   document.addEventListener('touchstart', _warmSpeech, {once:true, passive:true});
   document.addEventListener('click', _warmSpeech, {once:true, passive:true});
@@ -3296,22 +3302,30 @@ function navAnnounce(text){
 
 function navTestAndLoadVoices(){
   if(!window.speechSynthesis) return;
-  window.speechSynthesis.cancel();
+  // Do NOT cancel() first — on Android that resets TTS state and prevents voice loading
   const u = new SpeechSynthesisUtterance('Voice ready');
-  u.volume = 1; u.rate = 1;
-  // After speaking, reload voices — Android makes them available post-speak
+  u.volume = 0.5; u.rate = 1;
+  // Attach a voiceschanged listener that fires while/after we speak
+  const onVC = () => {
+    navLoadVoices();
+    speechSynthesis.removeEventListener('voiceschanged', onVC);
+  };
+  speechSynthesis.addEventListener('voiceschanged', onVC);
   u.onstart = () => { setTimeout(navLoadVoices, 100); };
   u.onend = u.onerror = () => {
-    setTimeout(navLoadVoices, 200);
-    setTimeout(navLoadVoices, 800);
+    speechSynthesis.removeEventListener('voiceschanged', onVC);
+    navLoadVoices();
+    setTimeout(navLoadVoices, 300);
+    setTimeout(navLoadVoices, 1000);
+    setTimeout(navLoadVoices, 2500);
   };
+  u.lang = navSelectedVoice ? navSelectedVoice.lang : (navSearchLang ? navSearchLang + '-' + (navSearchLang.toUpperCase()) : 'en-US');
   if(navSelectedVoice) u.voice = navSelectedVoice;
-  u.lang = navSelectedVoice ? navSelectedVoice.lang : (navSearchLang || 'en-US');
   speechSynthesis.speak(u);
-  // Also try immediately and after delays regardless
-  setTimeout(navLoadVoices, 50);
-  setTimeout(navLoadVoices, 500);
+  setTimeout(navLoadVoices, 100);
+  setTimeout(navLoadVoices, 600);
   setTimeout(navLoadVoices, 1500);
+  setTimeout(navLoadVoices, 3000);
 }
 
 function navSetProfile(profile){
