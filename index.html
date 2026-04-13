@@ -904,10 +904,21 @@
       position:absolute; top:0; left:0; right:0; z-index:1000;
       padding: max(env(safe-area-inset-top,0px),8px) 12px 14px;
       background:linear-gradient(to bottom,rgba(0,6,2,0.95) 0%,rgba(0,6,2,0.5) 72%,transparent 100%);
-      display:flex; align-items:center; gap:8px;
+      display:flex; flex-direction:column; gap:4px;
       pointer-events:none;
     }
-    #exp-hud-top > * { pointer-events:auto; }
+    #exp-hud-top-row { display:flex; align-items:center; gap:8px; width:100%; }
+    #exp-hud-top-row > * { pointer-events:auto; }
+    #exp-explored-row {
+      display:flex; align-items:center; justify-content:center; gap:6px;
+      pointer-events:none;
+    }
+    #exp-explored-row #completion-pct {
+      font-family:'Orbitron',sans-serif; font-size:1rem; font-weight:700; color:#4ade80; line-height:1;
+    }
+    #exp-explored-row .exp-explored-lbl {
+      font-family:'Orbitron',sans-serif; font-size:0.38rem; letter-spacing:2px; color:rgba(255,255,255,0.28); text-transform:uppercase;
+    }
     .exp-hud-home {
       background:rgba(0,0,0,0.42); border:1px solid rgba(74,222,128,0.22);
       border-radius:20px; padding:5px 11px 5px 9px; flex-shrink:0;
@@ -916,11 +927,11 @@
       backdrop-filter:blur(8px); transition:background 0.15s;
     }
     .exp-hud-home:hover { background:rgba(74,222,128,0.1); }
-    #exp-hud-top #status-indicator { flex:1; min-width:0; pointer-events:none; }
+    #exp-hud-top-row #status-indicator { flex:1; min-width:0; pointer-events:none; }
     .exp-top-icons { display:flex; align-items:center; gap:4px; flex-shrink:0; }
     /* Override absolute positioning for top-bar icons */
-    #exp-hud-top #sound-toggle,
-    #exp-hud-top #weather-btn {
+    #exp-hud-top-row #sound-toggle,
+    #exp-hud-top-row #weather-btn {
       position:static; top:auto; right:auto; padding:4px 7px; font-size:0.78rem;
     }
     /* Compass floats below home button (left side) */
@@ -951,17 +962,16 @@
     /* ── Right HUD side: elevation (rotated) ── */
     #exp-hud-right {
       position:absolute; right:0; top:50%; transform:translateY(-50%);
-      z-index:999; pointer-events:none; padding-right:3px;
+      z-index:999; pointer-events:none;
     }
-    #exp-hud-right #elev-badge {
-      position:static; top:auto; right:auto;
-      background:transparent; border:none; clip-path:none; padding:2px 0;
+    #alt-badge {
       writing-mode:vertical-rl;
       display:flex; flex-direction:column; align-items:center; gap:3px;
+      padding:2px 0;
     }
-    #exp-hud-right .clabel { font-size:0.35rem; letter-spacing:1px; color:rgba(74,222,128,0.38); }
-    #exp-hud-right #elev-current-val { font-size:0.95rem; }
-    #exp-hud-right #elev-current-unit { font-size:0.55rem; color:rgba(255,255,255,0.28); margin:0; }
+    #alt-badge .alt-lbl { font-family:'Orbitron',sans-serif; font-size:0.35rem; letter-spacing:1px; color:rgba(74,222,128,0.38); text-transform:uppercase; }
+    #alt-badge #elev-current-val { font-family:'Orbitron',sans-serif; font-size:0.95rem; font-weight:700; color:#4ade80; line-height:1.15; }
+    #alt-badge #elev-current-unit { font-family:'Rajdhani',sans-serif; font-size:0.55rem; color:rgba(255,255,255,0.28); margin:0; }
 
     /* ── Bottom HUD bar ── */
     #exp-hud-bottom {
@@ -988,7 +998,16 @@
       position:static; bottom:auto; left:auto; transform:none; flex:0 0 auto;
       display:flex; flex-direction:row; align-items:center; gap:0;
     }
-    #exp-hud-bottom #exp-menu-btn { position:static; bottom:auto; right:auto; width:36px; height:36px; flex-shrink:0; }
+    #exp-hud-bottom #exp-menu-btn {
+      position:static; bottom:auto; right:auto; flex-shrink:0;
+      width:52px; height:52px; border-radius:50%;
+      border:1.5px solid rgba(74,222,128,0.28);
+      background:rgba(0,10,5,0.88); color:rgba(74,222,128,0.8);
+      font-size:1.25rem; backdrop-filter:blur(8px);
+      box-shadow:0 2px 14px rgba(0,0,0,0.45), 0 0 8px rgba(74,222,128,0.07);
+      transition:all 0.25s; display:flex; align-items:center; justify-content:center;
+    }
+    #exp-hud-bottom #exp-menu-btn:hover { transform:scale(1.06); border-color:rgba(74,222,128,0.55); }
     #exp-hud-bottom #exp-ui-toggle { position:static; bottom:auto; left:auto; width:28px; height:28px; flex-shrink:0; }
     /* Bridge connector between track and discover buttons */
     .fab-bridge {
@@ -1671,8 +1690,8 @@
 ============================================================ -->
 <div id="splash-screen">
   <video id="splash-video" autoplay muted playsinline preload="auto">
+    <source src="openingscreenandroid.mp4" type="video/mp4">
     <source src="openingscreen.mov" type="video/quicktime">
-    <source src="openingscreen.mp4" type="video/mp4">
   </video>
   <div id="splash-skip">TAP TO SKIP</div>
 </div>
@@ -2296,14 +2315,20 @@
 
   <!-- Top HUD bar: HOME | GPS status | icons -->
   <div id="exp-hud-top">
-    <button class="exp-hud-home" onclick="goHome()"><span>←</span> HOME</button>
-    <div id="status-indicator">
-      <div class="dot" id="gps-dot"></div>
-      <span id="gps-status">GPS OFF</span>
+    <div id="exp-hud-top-row">
+      <button class="exp-hud-home" onclick="goHome()"><span>←</span> HOME</button>
+      <div id="status-indicator">
+        <div class="dot" id="gps-dot"></div>
+        <span id="gps-status">GPS OFF</span>
+      </div>
+      <div class="exp-top-icons">
+        <div id="sound-toggle" onclick="toggleSound()" title="Toggle sounds">🔊</div>
+        <div id="weather-btn" onclick="toggleWeatherPanel()" title="Weather">⛅</div>
+      </div>
     </div>
-    <div class="exp-top-icons">
-      <div id="sound-toggle" onclick="toggleSound()" title="Toggle sounds">🔊</div>
-      <div id="weather-btn" onclick="toggleWeatherPanel()" title="Weather">⛅</div>
+    <div id="exp-explored-row">
+      <span id="completion-pct">0.0%</span>
+      <span class="exp-explored-lbl">EXPLORED</span>
     </div>
   </div>
 
@@ -2322,22 +2347,9 @@
     </div>
   </div>
 
-  <!-- Left HUD side: explored % (vertical) -->
-  <div id="exp-hud-left">
-    <div id="completion-badge">
-      <div class="clabel">EXPLORED</div>
-      <div id="completion-pct">0.0%</div>
-      <div id="completion-sub" style="display:none"></div>
-    </div>
-  </div>
+  <div id="exp-hud-left"></div>
 
-  <!-- Right HUD side: elevation (vertical) -->
-  <div id="exp-hud-right">
-    <div id="elev-badge">
-      <div class="clabel">ALT</div>
-      <div><span id="elev-current-val">--</span><span id="elev-current-unit"> m</span></div>
-    </div>
-  </div>
+  <div id="exp-hud-right"></div>
 
   <!-- Live elevation chart overlay (shown while tracking, dismissable) -->
   <div id="exp-elev-chart">
@@ -2409,17 +2421,23 @@
         <div class="hud-stat-lbl">TIME</div>
         <div class="hud-stat-val" id="stat-time">00:00</div>
       </div>
+      <div class="hud-stat">
+        <div class="hud-stat-lbl">ALT</div>
+        <div class="hud-stat-val"><span id="elev-current-val">--</span><span class="hud-stat-unit" id="elev-current-unit">m</span></div>
+      </div>
     </div>
     <div id="exp-fab-wrap">
-      <button id="track-btn" onclick="toggleTracking()">
-        <span class="fab-icon" id="fab-icon">▶</span>
-        <span class="fab-label" id="fab-label">TRACK</span>
-      </button>
-      <div class="fab-bridge" id="fab-bridge"></div>
       <button id="fab-discover-btn" onclick="toggleDiscoverMode()" title="Discover & Learn">
         <span class="fab-icon">🔭</span>
         <span class="fab-label">SCOUT</span>
       </button>
+      <div class="fab-bridge" id="fab-bridge"></div>
+      <button id="track-btn" onclick="toggleTracking()">
+        <span class="fab-icon" id="fab-icon">▶</span>
+        <span class="fab-label" id="fab-label">TRACK</span>
+      </button>
+      <div class="fab-bridge" id="fab-bridge-2"></div>
+      <button id="exp-menu-btn" onclick="toggleExpControls()">⋮</button>
     </div>
     <div class="hud-stat-group right">
       <div class="hud-stat" style="align-items:flex-end">
@@ -2431,7 +2449,6 @@
         <div class="hud-stat-val"><span id="stat-speed">0</span><span class="hud-stat-unit">km/h</span></div>
       </div>
     </div>
-    <button id="exp-menu-btn" onclick="toggleExpControls()">⋮</button>
   </div>
 
   <!-- Bottom drawer: secondary controls -->
@@ -2619,6 +2636,7 @@ function goHome(){
   document.getElementById('home').classList.remove('hidden');
   currentMode='home';
   if(isTracking) stopTracking();
+  if(bgWatchId!==null){navigator.geolocation.clearWatch(bgWatchId);bgWatchId=null;}
   if(navWatchId!=null){navigator.geolocation.clearWatch(navWatchId);navWatchId=null;}
   el('settings-btn').style.display='none';
   const sbe = el('stats-back-explorer'); if(sbe) sbe.classList.remove('visible');
@@ -2809,7 +2827,7 @@ function navStartHeadingSensor() {
 }
 
 function navArrowIcon(color) {
-  color = color || '#0ea5e9';
+  color = color || (typeof activeTheme !== 'undefined' ? getThemeColors(activeTheme).main : '#0ea5e9');
   return L.divIcon({
     className: '',
     html: `<svg width="28" height="28" viewBox="0 0 28 28" style="transform-origin:14px 14px;filter:drop-shadow(0 0 4px ${color})"><polygon points="14,2 20,22 14,18 8,22" fill="${color}" stroke="#fff" stroke-width="1.5" stroke-linejoin="round"/></svg>`,
@@ -4008,7 +4026,7 @@ function openStatsFromExplorer() {
 let map,locationMarker,accuracyCircle,trackPolyline;
 let expHeading=0;
 function expArrowIcon(color){
-  color=color||'#4ade80';
+  color=color||(typeof activeTheme !== 'undefined' ? getThemeColors(activeTheme).main : '#4ade80');
   return L.divIcon({
     className:'',
     html:`<div style="width:28px;height:28px;position:relative"><svg width="28" height="28" viewBox="0 0 28 28" id="exp-arrow-svg" style="transform-origin:14px 14px;filter:drop-shadow(0 0 3px ${color})"><polygon points="14,2 20,22 14,18 8,22" fill="${color}" stroke="#000" stroke-width="1.2" stroke-linejoin="round"/></svg></div>`,
@@ -4039,7 +4057,7 @@ function expStartHeadingSensor(){
   window.addEventListener('deviceorientationabsolute',h,true);
   window.addEventListener('deviceorientation',h,true);
 }
-let isTracking=false,watchId=null,exploredPts=[],exploredKeys=new Set(),trackPath=[];
+let isTracking=false,watchId=null,bgWatchId=null,exploredPts=[],exploredKeys=new Set(),trackPath=[];
 let totalDistM=0,sessionDistM=0,lastPt=null,sessionStart=null,timerHandle=null;
 let sessionElevGain=0,sessionPeakAlt=null,lastSmoothedAlt=null,altBuffer=[],altProfile=[];
 let sessionPeakSpeed=0,sessionStartHour=-1;
@@ -4054,6 +4072,10 @@ function initMap(){
   window.addEventListener('resize',drawFog);
   loadSaved();
   if(regions.length) drawRegionLayers();
+  // Background GPS watch — keeps altitude warm even before tracking starts
+  if(navigator.geolocation){
+    bgWatchId=navigator.geolocation.watchPosition(onPosition,()=>{},{enableHighAccuracy:true,maximumAge:5000,timeout:15000});
+  }
 }
 
 // ---- Fog ----
@@ -5205,7 +5227,8 @@ function buildThemeCSS(c) {
     .hud-corner { border-color:rgba(${c.dr},0.6); }
     .exp-hud-home { border-color:rgba(${c.dr},0.22); }
     .exp-hud-home:hover { background:rgba(${c.dr},0.1); }
-    #exp-hud-top #sound-toggle { border-color:rgba(${c.dr},0.18); }
+    #exp-hud-top-row #sound-toggle { border-color:rgba(${c.dr},0.18); }
+    #exp-explored-row #completion-pct { color:${c.main}; }
     #exp-hud-bottom { background:linear-gradient(to top,rgba(0,6,2,0.97) 0%,rgba(0,6,2,0.58) 65%,transparent 100%); }
     #exp-hud-top { background:linear-gradient(to bottom,rgba(0,6,2,0.95) 0%,rgba(0,6,2,0.5) 72%,transparent 100%); }
     #map-zoom button { color:rgba(${c.dr},0.85); border-color:rgba(${c.dr},0.22); }
@@ -5222,6 +5245,16 @@ function buildThemeCSS(c) {
     #discover-narrating-fill { background:linear-gradient(90deg,rgba(${c.dr},0.5),${c.main}); }
     #discover-toggle { border-color:rgba(${c.dr},0.18); }
     #discover-toggle.discover-active { background:rgba(${c.dr},0.15); border-color:rgba(${c.dr},0.45); }
+    #fab-discover-btn { border-color:rgba(${c.dr},0.28); color:rgba(${c.dr},0.8); }
+    #fab-discover-btn .fab-label { color:rgba(${c.dr},0.55); }
+    #fab-discover-btn:hover { border-color:rgba(${c.dr},0.55); }
+    #fab-discover-btn.discover-active { background:rgba(${c.dr},0.13); border-color:rgba(${c.dr},0.8); }
+    #fab-discover-btn.discover-active .fab-label { color:rgba(${c.dr},0.85); }
+    #exp-hud-bottom #exp-menu-btn { border-color:rgba(${c.dr},0.28); color:rgba(${c.dr},0.8); }
+    #exp-hud-bottom #exp-menu-btn:hover { border-color:rgba(${c.dr},0.55); }
+    #exp-compass-float polygon:first-child { fill:${c.main}; }
+    #exp-compass-float polygon:last-child { fill:rgba(${c.dr},0.3); }
+    #exp-compass-float circle:last-child { fill:${c.main}; }
   `;
 }
 
@@ -5232,12 +5265,26 @@ function applyTheme(name) {
     styleEl.id = 'wt-theme';
     document.head.appendChild(styleEl);
   }
-  styleEl.textContent = buildThemeCSS(getThemeColors(name));
+  const c = getThemeColors(name);
+  styleEl.textContent = buildThemeCSS(c);
   document.querySelectorAll('.theme-option').forEach(opt => {
     opt.classList.toggle('active', opt.dataset.theme === name);
   });
   activeTheme = name;
   localStorage.setItem('wt_theme', name);
+  // Update map arrows with theme color
+  const themeColor = c.main;
+  if(typeof locationMarker !== 'undefined' && locationMarker) {
+    locationMarker.setIcon(expArrowIcon(themeColor));
+  }
+  const expSvg = document.getElementById('exp-arrow-svg');
+  if(expSvg) {
+    expSvg.querySelector('polygon').setAttribute('fill', themeColor);
+    expSvg.style.filter = `drop-shadow(0 0 3px ${themeColor})`;
+  }
+  if(typeof navUserMarker !== 'undefined' && navUserMarker) {
+    navUserMarker.setIcon(navArrowIcon(themeColor));
+  }
 }
 
 function selectTheme(name) { applyTheme(name); }
