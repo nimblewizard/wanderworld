@@ -565,7 +565,7 @@
     .stat-value { font-family:'Orbitron',sans-serif; font-size:1.3rem; font-weight:700; color:#4ade80; line-height:1.1; }
     .stat-unit { font-family:'Rajdhani',sans-serif; font-size:0.75rem; color:rgba(255,255,255,0.3); margin-left:3px; }
 
-    #exp-controls { position:absolute; bottom:0; left:0; right:0; z-index:1001; background:rgba(2,8,4,0.97); backdrop-filter:blur(18px); border-top:1px solid rgba(74,222,128,0.12); border-radius:20px 20px 0 0; padding:8px 20px max(24px, env(safe-area-inset-bottom, 24px)); transform:translateY(100%); transition:transform 0.32s cubic-bezier(0.32,0.72,0,1); display:flex; flex-direction:column; gap:8px; }
+    #exp-controls { position:absolute; bottom:0; left:0; right:0; z-index:1003; background:rgba(2,8,4,0.97); backdrop-filter:blur(18px); border-top:1px solid rgba(74,222,128,0.12); border-radius:20px 20px 0 0; padding:8px 20px max(24px, env(safe-area-inset-bottom, 24px)); transform:translateY(100%); transition:transform 0.32s cubic-bezier(0.32,0.72,0,1); display:flex; flex-direction:column; gap:8px; }
     #exp-controls.open { transform:translateY(0); }
     #exp-controls-handle { width:36px; height:4px; background:rgba(255,255,255,0.13); border-radius:2px; margin:10px auto 12px; }
     #exp-controls-row { display:flex; gap:8px; }
@@ -762,10 +762,9 @@
     #map-zoom button:active { transform:scale(0.9); }
 
     /* ---- Draggable widgets ---- */
-    #sound-toggle, #compass-indicator, #theme-btn, #weather-btn,
-    #completion-badge, #elev-badge, #coords-display,
-    #session-badge, #map-zoom, #stats-panel, #exp-controls,
-    #challenges-btn, #fit-start-btn, #fit-stats-bottom, #elev-profile-wrap { touch-action:none; }
+    #theme-btn, #map-zoom, #stats-panel,
+    #challenges-btn, #fit-start-btn, #fit-stats-bottom,
+    #elev-profile-wrap, #exp-elev-chart { touch-action:none; }
     .wt-dragging { transform:scale(1.18) !important; opacity:0.72 !important; z-index:1100 !important; cursor:grabbing !important; transition:none !important; box-shadow:0 6px 24px rgba(0,0,0,0.5) !important; }
 
     /* ---- Explorer UI toggle ---- */
@@ -780,6 +779,132 @@
     }
     #exp-ui-toggle:hover { background:rgba(255,255,255,0.1); color:rgba(255,255,255,0.72); }
     #exp-ui-toggle.ui-off { color:rgba(255,255,255,0.14); border-color:rgba(255,255,255,0.06); background:rgba(0,0,0,0.28); }
+
+    /* ============================================================
+       EXPLORER HUD — Doom/Halo perimeter vignette
+    ============================================================ */
+    #exp-hud { position:absolute; inset:0; z-index:998; pointer-events:none; }
+    /* Radial vignette: clear center, dark edges */
+    #exp-hud::before {
+      content:''; position:absolute; inset:0;
+      background: radial-gradient(ellipse 62% 52% at 50% 50%,
+        transparent 0%, transparent 44%,
+        rgba(1,9,2,0.48) 60%, rgba(0,5,1,0.82) 77%, rgba(0,2,1,0.96) 100%);
+    }
+    /* Scanline texture, masked to vignette edges only */
+    #exp-hud::after {
+      content:''; position:absolute; inset:0;
+      background: repeating-linear-gradient(to bottom,
+        transparent 0px, transparent 3px,
+        rgba(74,222,128,0.012) 3px, rgba(74,222,128,0.012) 4px);
+      mask-image: radial-gradient(ellipse 62% 52% at 50% 50%,
+        transparent 0%, transparent 44%, black 62%);
+      -webkit-mask-image: radial-gradient(ellipse 62% 52% at 50% 50%,
+        transparent 0%, transparent 44%, black 62%);
+    }
+    /* Corner targeting brackets */
+    .hud-corner { position:absolute; z-index:1003; width:18px; height:18px; pointer-events:none; }
+    .hud-corner.tl { top:max(env(safe-area-inset-top,0px),8px); left:8px;
+      border-top:1.5px solid rgba(74,222,128,0.65); border-left:1.5px solid rgba(74,222,128,0.65); }
+    .hud-corner.tr { top:max(env(safe-area-inset-top,0px),8px); right:8px;
+      border-top:1.5px solid rgba(74,222,128,0.65); border-right:1.5px solid rgba(74,222,128,0.65); }
+    .hud-corner.bl { bottom:max(env(safe-area-inset-bottom,0px),8px); left:8px;
+      border-bottom:1.5px solid rgba(74,222,128,0.65); border-left:1.5px solid rgba(74,222,128,0.65); }
+    .hud-corner.br { bottom:max(env(safe-area-inset-bottom,0px),8px); right:8px;
+      border-bottom:1.5px solid rgba(74,222,128,0.65); border-right:1.5px solid rgba(74,222,128,0.65); }
+
+    /* ── Top HUD bar ── */
+    #exp-hud-top {
+      position:absolute; top:0; left:0; right:0; z-index:1000;
+      padding: max(env(safe-area-inset-top,0px),8px) 12px 14px;
+      background:linear-gradient(to bottom,rgba(0,6,2,0.95) 0%,rgba(0,6,2,0.5) 72%,transparent 100%);
+      display:flex; align-items:center; gap:8px;
+      pointer-events:none;
+    }
+    #exp-hud-top > * { pointer-events:auto; }
+    .exp-hud-home {
+      background:rgba(0,0,0,0.42); border:1px solid rgba(74,222,128,0.22);
+      border-radius:20px; padding:5px 11px 5px 9px; flex-shrink:0;
+      font-family:'Orbitron',sans-serif; font-size:0.52rem; font-weight:700; letter-spacing:1px;
+      color:rgba(255,255,255,0.65); cursor:pointer; display:flex; align-items:center; gap:5px;
+      backdrop-filter:blur(8px); transition:background 0.15s;
+    }
+    .exp-hud-home:hover { background:rgba(74,222,128,0.1); }
+    #exp-hud-top #status-indicator { flex:1; min-width:0; pointer-events:none; }
+    .exp-top-icons { display:flex; align-items:center; gap:4px; flex-shrink:0; }
+    /* Override absolute positioning for top-bar icons */
+    #exp-hud-top #sound-toggle,
+    #exp-hud-top #weather-btn {
+      position:static; top:auto; right:auto; padding:4px 7px; font-size:0.78rem;
+    }
+    #exp-hud-top #compass-indicator {
+      position:static; top:auto; right:auto; width:28px; height:28px;
+    }
+
+    /* ── Left HUD side: explored % (rotated) ── */
+    #exp-hud-left {
+      position:absolute; left:0; top:50%; transform:translateY(-50%);
+      z-index:999; pointer-events:none; padding-left:3px;
+    }
+    #exp-hud-left #completion-badge {
+      position:static; top:auto; left:auto;
+      background:transparent; border:none; clip-path:none; padding:2px 0;
+      writing-mode:vertical-rl; transform:rotate(180deg);
+      display:flex; flex-direction:column; align-items:center; gap:3px;
+    }
+    #exp-hud-left .clabel { font-size:0.35rem; letter-spacing:1px; color:rgba(74,222,128,0.38); }
+    #exp-hud-left #completion-pct { font-size:0.95rem; }
+    #exp-hud-left #completion-sub { display:none !important; }
+
+    /* ── Right HUD side: elevation (rotated) ── */
+    #exp-hud-right {
+      position:absolute; right:0; top:50%; transform:translateY(-50%);
+      z-index:999; pointer-events:none; padding-right:3px;
+    }
+    #exp-hud-right #elev-badge {
+      position:static; top:auto; right:auto;
+      background:transparent; border:none; clip-path:none; padding:2px 0;
+      writing-mode:vertical-rl;
+      display:flex; flex-direction:column; align-items:center; gap:3px;
+    }
+    #exp-hud-right .clabel { font-size:0.35rem; letter-spacing:1px; color:rgba(74,222,128,0.38); }
+    #exp-hud-right #elev-current-val { font-size:0.95rem; }
+    #exp-hud-right #elev-current-unit { font-size:0.55rem; color:rgba(255,255,255,0.28); margin:0; }
+
+    /* ── Bottom HUD bar ── */
+    #exp-hud-bottom {
+      position:absolute; bottom:0; left:0; right:0; z-index:1002;
+      padding: 8px 10px max(env(safe-area-inset-bottom,0px),12px);
+      background:linear-gradient(to top,rgba(0,6,2,0.97) 0%,rgba(0,6,2,0.58) 65%,transparent 100%);
+      display:flex; align-items:center; justify-content:space-between;
+      pointer-events:none; gap:3px;
+    }
+    #exp-hud-bottom > * { pointer-events:auto; }
+    .hud-stat-group { display:flex; flex-direction:column; gap:5px; flex:1; }
+    .hud-stat-group.right { align-items:flex-end; }
+    .hud-stat { display:flex; flex-direction:column; }
+    .hud-stat-lbl {
+      font-family:'Orbitron',sans-serif; font-size:0.36rem; letter-spacing:1.5px;
+      color:rgba(255,255,255,0.2); text-transform:uppercase; margin-bottom:1px;
+    }
+    .hud-stat-val {
+      font-family:'Orbitron',sans-serif; font-size:0.85rem; font-weight:700; color:#4ade80; line-height:1.1;
+    }
+    .hud-stat-unit { font-family:'Rajdhani',sans-serif; font-size:0.55rem; color:rgba(255,255,255,0.26); margin-left:2px; }
+    /* FAB, menu, eye buttons: override absolute/fixed positioning inside bottom bar */
+    #exp-hud-bottom #exp-fab-wrap {
+      position:static; bottom:auto; left:auto; transform:none; flex:0 0 auto;
+      display:flex; flex-direction:column; align-items:center;
+    }
+    #exp-hud-bottom #exp-menu-btn { position:static; bottom:auto; right:auto; width:36px; height:36px; flex-shrink:0; }
+    #exp-hud-bottom #exp-ui-toggle { position:static; bottom:auto; left:auto; width:28px; height:28px; flex-shrink:0; }
+
+    /* Keep session-badge in DOM for JS, but visually hidden (stats now in HUD bottom bar) */
+    #session-badge { display:none !important; }
+    /* Stats panel: hidden until opened via STATS button in exp-controls */
+    #stats-panel { position:absolute; bottom:max(env(safe-area-inset-bottom,0px),100px); left:50%; transform:translateX(-50%); display:none; }
+    /* Coords display: hidden (GPS precision shown in status bar text) */
+    #coords-display { display:none !important; }
 
     /* ---- About overlay ---- */
     #about-overlay {
@@ -893,7 +1018,7 @@
 
     /* ---- Theme button ---- */
     #theme-btn {
-      position:fixed; top:max(108px, calc(env(safe-area-inset-top, 0px) + 60px)); right:18px; z-index:1010;
+      position:fixed; top:max(56px, calc(env(safe-area-inset-top, 0px) + 44px)); right:14px; z-index:1010;
       background:rgba(0,0,0,0.45); border:1px solid rgba(255,255,255,0.1);
       border-radius:50%; width:36px; height:36px;
       display:flex; align-items:center; justify-content:center;
@@ -972,7 +1097,7 @@
        DISCOVER & LEARN
     ============================================================ */
     /* Discover toggle icon (matches sound-toggle / weather-btn style) */
-    #discover-toggle { position:absolute; top:62px; right:128px; z-index:1000; background:rgba(0,0,0,0.55); border:1px solid rgba(255,255,255,0.12); border-radius:8px; padding:5px 9px; cursor:pointer; font-size:0.85rem; transition:background 0.15s, border-color 0.15s; user-select:none; }
+    #discover-toggle { position:absolute; top:max(68px, calc(env(safe-area-inset-top,0px) + 56px)); right:14px; z-index:1000; background:rgba(0,0,0,0.55); border:1px solid rgba(255,255,255,0.12); border-radius:8px; padding:5px 9px; cursor:pointer; font-size:0.85rem; transition:background 0.15s, border-color 0.15s; user-select:none; }
     #discover-toggle:hover { background:rgba(255,255,255,0.1); }
     #discover-toggle.discover-active { background:rgba(74,222,128,0.15); border-color:rgba(74,222,128,0.45); }
 
@@ -1841,18 +1966,56 @@
   <canvas id="fog-canvas"></canvas>
   <div id="backdrop" onclick="closeHistory();closeRegions();closeQuests();closeOfflinePanel();"></div>
 
-  <div id="exp-top-bar">
-    <button class="back-btn" style="position:relative;top:auto;left:auto;margin:0" onclick="goHome()"><span>←</span> HOME</button>
+  <!-- HUD vignette overlay + corner brackets -->
+  <div id="exp-hud" aria-hidden="true">
+    <div class="hud-corner tl"></div>
+    <div class="hud-corner tr"></div>
+    <div class="hud-corner bl"></div>
+    <div class="hud-corner br"></div>
+  </div>
+
+  <!-- Top HUD bar: HOME | GPS status | icons -->
+  <div id="exp-hud-top">
+    <button class="exp-hud-home" onclick="goHome()"><span>←</span> HOME</button>
     <div id="status-indicator">
       <div class="dot" id="gps-dot"></div>
       <span id="gps-status">GPS OFF</span>
     </div>
+    <div class="exp-top-icons">
+      <div id="sound-toggle" onclick="toggleSound()" title="Toggle sounds">🔊</div>
+      <div id="weather-btn" onclick="toggleWeatherPanel()" title="Weather">⛅</div>
+      <div id="compass-indicator">
+        <svg viewBox="0 0 40 40" width="28" height="28">
+          <circle cx="20" cy="20" r="18" fill="rgba(0,0,0,0.55)" stroke="rgba(74,222,128,0.25)" stroke-width="1"/>
+          <text x="20" y="10" text-anchor="middle" fill="rgba(74,222,128,0.8)" font-size="6" font-family="Orbitron,sans-serif" font-weight="700">N</text>
+          <g style="transform-origin:20px 20px;animation:needleWobble 4s ease-in-out infinite">
+            <polygon points="20,5 18,20 22,20"  fill="#4ade80" opacity="0.9"/>
+            <polygon points="20,35 18,20 22,20" fill="rgba(74,222,128,0.3)"/>
+            <circle cx="20" cy="20" r="2.5" fill="#4ade80"/>
+          </g>
+        </svg>
+      </div>
+    </div>
   </div>
 
-  <!-- Sound toggle -->
-  <div id="sound-toggle" onclick="toggleSound()" title="Toggle sounds">🔊</div>
-  <!-- Weather button -->
-  <div id="weather-btn" onclick="toggleWeatherPanel()" title="Weather">⛅</div>
+  <!-- Left HUD side: explored % (vertical) -->
+  <div id="exp-hud-left">
+    <div id="completion-badge">
+      <div class="clabel">EXPLORED</div>
+      <div id="completion-pct">0.0%</div>
+      <div id="completion-sub" style="display:none"></div>
+    </div>
+  </div>
+
+  <!-- Right HUD side: elevation (vertical) -->
+  <div id="exp-hud-right">
+    <div id="elev-badge">
+      <div class="clabel">ALT</div>
+      <div><span id="elev-current-val">--</span><span id="elev-current-unit"> m</span></div>
+    </div>
+  </div>
+
+  <!-- Map zoom controls -->
   <div id="map-zoom">
     <button onclick="map&&map.zoomIn()">+</button>
     <button onclick="map&&map.zoomOut()">−</button>
@@ -1868,76 +2031,7 @@
     <canvas id="exp-elev-canvas"></canvas>
   </div>
 
-  <!-- Session live stats badge (visible during active tracking) -->
-  <div id="session-badge">
-    <div class="sb-label">Session Dist</div>
-    <div class="sb-val"><span id="sb-dist">0.00</span> <span style="font-size:0.6rem;color:rgba(255,255,255,0.3)">km</span></div>
-    <div class="sb-sub"><span id="sb-tiles">0</span> tiles · <span id="sb-elev-gain">0</span>m ↑</div>
-  </div>
-
-  <!-- Mini compass on explorer screen -->
-  <div id="compass-indicator" style="position:absolute;top:62px;right:50px;z-index:1000;width:36px;height:36px">
-    <svg viewBox="0 0 40 40" width="36" height="36">
-      <circle cx="20" cy="20" r="18" fill="rgba(0,0,0,0.55)" stroke="rgba(74,222,128,0.25)" stroke-width="1"/>
-      <text x="20" y="10" text-anchor="middle" fill="rgba(74,222,128,0.8)" font-size="6" font-family="Orbitron,sans-serif" font-weight="700">N</text>
-      <g style="transform-origin:20px 20px;animation:needleWobble 4s ease-in-out infinite">
-        <polygon points="20,5 18,20 22,20"  fill="#4ade80" opacity="0.9"/>
-        <polygon points="20,35 18,20 22,20" fill="rgba(74,222,128,0.3)"/>
-        <circle cx="20" cy="20" r="2.5" fill="#4ade80"/>
-      </g>
-    </svg>
-  </div>
-
-  <div id="completion-badge">
-    <div class="clabel">View Explored</div>
-    <div id="completion-pct">0.0%</div>
-    <div id="completion-sub">of current map view</div>
-  </div>
-  <div id="elev-badge">
-    <div class="clabel">Elevation</div>
-    <div><span id="elev-current-val">--</span><span id="elev-current-unit"> m</span></div>
-  </div>
-  <div id="coords-display" style="right:18px;top:102px">---.-----, ---.-----</div>
-
-  <div id="stats-panel" onclick="toggleStats()">
-    <div id="stats-toggle">STATS ▾</div>
-    <div id="stats-body">
-      <div class="stat-item"><div class="stat-label">Distance</div><div class="stat-value"><span id="stat-distance">0.00</span><span class="stat-unit">km</span></div></div>
-      <div class="stat-item"><div class="stat-label">Session</div><div class="stat-value" id="stat-time">00:00</div></div>
-      <div class="stat-item"><div class="stat-label">Speed</div><div class="stat-value"><span id="stat-speed">0</span><span class="stat-unit">km/h</span></div></div>
-      <div class="stat-item"><div class="stat-label">Tiles</div><div class="stat-value" id="stat-explored">0</div></div>
-      <div class="stat-item"><div class="stat-label">Sessions</div><div class="stat-value" id="stat-sessions">0</div></div>
-      <div class="stat-item"><div class="stat-label">Altitude</div><div class="stat-value"><span id="stat-elev">--</span><span class="stat-unit">m</span></div></div>
-      <div class="stat-item"><div class="stat-label">Elev Gain</div><div class="stat-value"><span id="stat-elev-gain">0</span><span class="stat-unit">m ↑</span></div></div>
-    </div>
-  </div>
-
-  <!-- FAB: tracking button -->
-  <div id="exp-fab-wrap">
-    <button id="track-btn" onclick="toggleTracking()">
-      <span class="fab-icon" id="fab-icon">▶</span>
-      <span class="fab-label" id="fab-label">TRACK</span>
-    </button>
-  </div>
-  <!-- Menu button -->
-  <button id="exp-menu-btn" onclick="toggleExpControls()">⋮</button>
-  <!-- Bottom drawer: secondary controls -->
-  <div id="exp-controls">
-    <div id="exp-controls-handle" onclick="toggleExpControls()"></div>
-    <div id="exp-controls-row">
-      <button class="btn btn-secondary" style="flex:1" onclick="openHistory();toggleExpControls()">HISTORY</button>
-      <button class="btn btn-secondary" style="flex:1" onclick="openRegions();toggleExpControls()">REGIONS</button>
-      <button class="btn btn-secondary" style="flex:1" onclick="openQuests();toggleExpControls()">QUESTS</button>
-    </div>
-    <div id="exp-controls-row">
-      <button class="btn btn-secondary" style="flex:1" onclick="openSharePanel();toggleExpControls()">SHARE</button>
-      <button class="btn btn-secondary" style="flex:1" id="offline-btn" onclick="openOfflinePanel();toggleExpControls()">OFFLINE</button>
-    </div>
-  </div>
-  <!-- backdrop for controls drawer -->
-  <div id="exp-controls-backdrop" onclick="toggleExpControls()" style="position:absolute;inset:0;z-index:1000;display:none;background:rgba(0,0,0,0.3)"></div>
-
-  <!-- Discover & Learn — compact strip -->
+  <!-- Discover & Learn strip -->
   <div id="discover-card">
     <div id="discover-card-info">
       <div id="discover-source-lbl">· WIKIPEDIA ·</div>
@@ -1949,15 +2043,79 @@
     </div>
     <div id="discover-narrating-bar"><div id="discover-narrating-fill"></div></div>
   </div>
-
-  <!-- Discover toggle icon button -->
   <div id="discover-toggle" onclick="toggleDiscoverMode()" title="Discover & Learn">🔭</div>
 
-  <button id="exp-ui-toggle" onclick="toggleExpUI()" title="Toggle UI overlay">
-    <svg id="exp-ui-eye" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
-    </svg>
-  </button>
+  <!-- Session badge: kept in DOM for JS (.active toggle), content moved to HUD bottom bar -->
+  <div id="session-badge">
+    <span id="sb-elev-gain" style="display:none">0</span>
+  </div>
+
+  <!-- Coords display: kept in DOM for JS updates, visually hidden -->
+  <div id="coords-display">---.-----, ---.-----</div>
+
+  <!-- Stats panel: detailed all-time stats, accessible via exp-controls STATS button -->
+  <div id="stats-panel">
+    <div id="stats-toggle" onclick="closeStats()">STATS  ✕</div>
+    <div id="stats-body">
+      <div class="stat-item"><div class="stat-label">Total Dist</div><div class="stat-value"><span id="stat-distance">0.00</span><span class="stat-unit">km</span></div></div>
+      <div class="stat-item"><div class="stat-label">Tiles</div><div class="stat-value" id="stat-explored">0</div></div>
+      <div class="stat-item"><div class="stat-label">Sessions</div><div class="stat-value" id="stat-sessions">0</div></div>
+      <div class="stat-item"><div class="stat-label">Altitude</div><div class="stat-value"><span id="stat-elev">--</span><span class="stat-unit">m</span></div></div>
+      <div class="stat-item"><div class="stat-label">Elev Gain</div><div class="stat-value"><span id="stat-elev-gain">0</span><span class="stat-unit">m ↑</span></div></div>
+    </div>
+  </div>
+
+  <!-- Bottom HUD bar: eye | dist+time | FAB | tiles+spd | menu -->
+  <div id="exp-hud-bottom">
+    <button id="exp-ui-toggle" onclick="toggleExpUI()" title="Toggle UI">
+      <svg id="exp-ui-eye" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+      </svg>
+    </button>
+    <div class="hud-stat-group">
+      <div class="hud-stat">
+        <div class="hud-stat-lbl">DIST</div>
+        <div class="hud-stat-val"><span id="sb-dist">0.00</span><span class="hud-stat-unit">km</span></div>
+      </div>
+      <div class="hud-stat">
+        <div class="hud-stat-lbl">TIME</div>
+        <div class="hud-stat-val" id="stat-time">00:00</div>
+      </div>
+    </div>
+    <div id="exp-fab-wrap">
+      <button id="track-btn" onclick="toggleTracking()">
+        <span class="fab-icon" id="fab-icon">▶</span>
+        <span class="fab-label" id="fab-label">TRACK</span>
+      </button>
+    </div>
+    <div class="hud-stat-group right">
+      <div class="hud-stat" style="align-items:flex-end">
+        <div class="hud-stat-lbl">TILES</div>
+        <div class="hud-stat-val" id="sb-tiles">0</div>
+      </div>
+      <div class="hud-stat" style="align-items:flex-end">
+        <div class="hud-stat-lbl">SPD</div>
+        <div class="hud-stat-val"><span id="stat-speed">0</span><span class="hud-stat-unit">km/h</span></div>
+      </div>
+    </div>
+    <button id="exp-menu-btn" onclick="toggleExpControls()">⋮</button>
+  </div>
+
+  <!-- Bottom drawer: secondary controls -->
+  <div id="exp-controls">
+    <div id="exp-controls-handle" onclick="toggleExpControls()"></div>
+    <div id="exp-controls-row">
+      <button class="btn btn-secondary" style="flex:1" onclick="openHistory();toggleExpControls()">HISTORY</button>
+      <button class="btn btn-secondary" style="flex:1" onclick="openRegions();toggleExpControls()">REGIONS</button>
+      <button class="btn btn-secondary" style="flex:1" onclick="openQuests();toggleExpControls()">QUESTS</button>
+    </div>
+    <div id="exp-controls-row">
+      <button class="btn btn-secondary" style="flex:1" onclick="openSharePanel();toggleExpControls()">SHARE</button>
+      <button class="btn btn-secondary" style="flex:1" id="offline-btn" onclick="openOfflinePanel();toggleExpControls()">OFFLINE</button>
+      <button class="btn btn-secondary" style="flex:1" onclick="toggleStats();toggleExpControls()">STATS</button>
+    </div>
+  </div>
+  <div id="exp-controls-backdrop" onclick="toggleExpControls()" style="position:absolute;inset:0;z-index:1002;display:none;background:rgba(0,0,0,0.3)"></div>
 
   <div id="history-panel">
     <div id="history-handle"></div>
@@ -3358,7 +3516,16 @@ function updateMarker(lat,lng,acc){
 
 // ---- Stats / achievements / history ----
 function updateStats(){el('stat-explored').textContent=exploredKeys.size.toLocaleString();el('stat-sessions').textContent=sessions.length;}
-function toggleStats(){statsExpanded=!statsExpanded;el('stats-body').style.display=statsExpanded?'':'none';el('stats-toggle').textContent=statsExpanded?'STATS ▾':'STATS ▸';}
+let statsOpen = false;
+function toggleStats(){
+  statsOpen = !statsOpen;
+  const p = el('stats-panel');
+  p.style.display = statsOpen ? 'block' : 'none';
+  statsExpanded = true;
+  el('stats-body').style.display = '';
+  el('stats-toggle').textContent = 'STATS  ✕';
+}
+function closeStats(){ statsOpen=false; el('stats-panel').style.display='none'; }
 function tickTimer(){const s=Math.floor((Date.now()-sessionStart)/1000);el('stat-time').textContent=String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');}
 function checkAchievements(){
   ACHIEVEMENTS.forEach(a=>{
@@ -4280,6 +4447,13 @@ function buildThemeCSS(c) {
     #region-add-btn:hover { background:rgba(${c.dr},0.18); }
     #elev-badge { border-color:rgba(${c.dr},0.22); }
     #elev-current-val { color:${c.main}; }
+    .hud-stat-val { color:${c.main}; }
+    .hud-corner { border-color:rgba(${c.dr},0.6); }
+    .exp-hud-home { border-color:rgba(${c.dr},0.22); }
+    .exp-hud-home:hover { background:rgba(${c.dr},0.1); }
+    #exp-hud-top #sound-toggle { border-color:rgba(${c.dr},0.18); }
+    #exp-hud-bottom { background:linear-gradient(to top,rgba(0,6,2,0.97) 0%,rgba(0,6,2,0.58) 65%,transparent 100%); }
+    #exp-hud-top { background:linear-gradient(to bottom,rgba(0,6,2,0.95) 0%,rgba(0,6,2,0.5) 72%,transparent 100%); }
     #map-zoom button { color:rgba(${c.dr},0.85); border-color:rgba(${c.dr},0.22); }
     #map-zoom button:hover { background:rgba(${c.dr},0.14); color:${c.main}; }
     .share-tab.active { border-color:rgba(${c.dr},0.4); }
@@ -4423,33 +4597,20 @@ function makePinchable(elem) {
   const W = window.innerWidth;
   const H = window.innerHeight;
   // global widgets
-  makeDraggable(document.getElementById('sound-toggle'),      W - 128,              62);
-  makeDraggable(document.getElementById('compass-indicator'), W - 86,               62);
   makeDraggable(document.getElementById('theme-btn'),         W - 54,               52);
-  makeDraggable(document.getElementById('weather-btn'),       W - 128,              108);
-  // explorer UI — top-left badges
-  makeDraggable(document.getElementById('completion-badge'),  18,                   58);
-  makeDraggable(document.getElementById('elev-badge'),        18,                   168);
-  // explorer UI — top-right coords
-  makeDraggable(document.getElementById('coords-display'),    W - 148,              102);
-  // explorer UI — live elevation chart overlay
+  // explorer UI — live elevation chart overlay (still draggable)
   makeDraggable(document.getElementById('exp-elev-chart'),    16,                   H - 290);
-  // explorer UI — bottom-right session badge
-  makeDraggable(document.getElementById('session-badge'),     Math.round(W/2) - 80, H - 182);
   // explorer UI — left-center zoom
   makeDraggable(document.getElementById('map-zoom'),          16,                   Math.round(H / 2) - 40);
-  // explorer UI — stats panel (centered bottom)
-  makeDraggable(document.getElementById('stats-panel'),       Math.round(W/2) - 110, H - 210);
-  // exp-controls is now a bottom drawer — no draggable needed
-  makeDraggable(document.getElementById('discover-toggle'),   W - 128,              154);
+  // explorer UI — stats panel (detailed, pinchable)
+  makeDraggable(document.getElementById('stats-panel'),       Math.round(W/2) - 110, H - 260);
+  makeDraggable(document.getElementById('discover-toggle'),   W - 58,               72);
   // fitness UI widgets
   makeDraggable(document.getElementById('challenges-btn'),    24,                       Math.round(H * 0.33));
   makeDraggable(document.getElementById('fit-start-btn'),     24,                       Math.round(H * 0.44));
   makeDraggable(document.getElementById('fit-stats-bottom'),  0,                        H - 70);
   makeDraggable(document.getElementById('elev-profile-wrap'), 16,                       Math.round(H * 0.6));
   makePinchable(document.getElementById('stats-panel'));
-  makePinchable(document.getElementById('session-badge'));
-  makePinchable(document.getElementById('completion-badge'));
 })();
 
 // Double-tap map to toggle explorer UI
@@ -4925,9 +5086,8 @@ function renderShareCanvas() {
 
 // ---- Explorer hide UI ----
 const EXP_HIDEABLE = [
-  'sound-toggle','weather-btn','discover-toggle','exp-elev-chart','session-badge',
-  'compass-indicator','completion-badge','elev-badge','coords-display',
-  'stats-panel','exp-controls','status-indicator'
+  'exp-hud-top','exp-hud-bottom','exp-hud-left','exp-hud-right','exp-hud',
+  'discover-toggle','exp-elev-chart','stats-panel','exp-controls'
 ];
 let expUIHidden = false;
 
@@ -4946,8 +5106,14 @@ function setExpUI(hidden) {
     themeBtn.style.opacity = hidden ? '0' : '';
     themeBtn.style.pointerEvents = hidden ? 'none' : '';
   }
+  // Keep the eye toggle visible/clickable even when HUD is hidden
   const toggleBtn = document.getElementById('exp-ui-toggle');
-  if (toggleBtn) toggleBtn.classList.toggle('ui-off', hidden);
+  if (toggleBtn) {
+    toggleBtn.classList.toggle('ui-off', hidden);
+    toggleBtn.style.transition = 'opacity 0.3s ease';
+    toggleBtn.style.opacity = hidden ? '0.4' : '';
+    toggleBtn.style.pointerEvents = 'auto';
+  }
   const eye = document.getElementById('exp-ui-eye');
   if (eye) eye.innerHTML = hidden
     ? '<path d="M17.94 17.94A10 10 0 0 1 12 20c-7 0-11-8-11-8a18 18 0 0 1 5.06-5.94M9.9 4.24A9 9 0 0 1 12 4c7 0 11 8 11 8a18 18 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>'
