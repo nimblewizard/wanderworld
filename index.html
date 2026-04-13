@@ -27,6 +27,23 @@
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <script>
+    firebase.initializeApp({
+      apiKey:            "AIzaSyDwrayW1KVWZQA5Fx4iXB_0vZM8eYko-Bs",
+      authDomain:        "wanderworld-f20b2.firebaseapp.com",
+      projectId:         "wanderworld-f20b2",
+      storageBucket:     "wanderworld-f20b2.firebasestorage.app",
+      messagingSenderId: "463316006878",
+      appId:             "1:463316006878:web:2a85cc7e9b572605960f4f"
+    });
+    const fbAuth = firebase.auth();
+    const fbDb   = firebase.firestore();
+  </script>
   <style>
     *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
     html, body { height:100%; overflow:hidden; font-family:'Rajdhani',system-ui,sans-serif; background:#050508; color:#fff; }
@@ -2848,11 +2865,14 @@ function stopTracking(){
   el('exp-elev-chart').classList.remove('tracking');
   const dur=Math.floor((Date.now()-sessionStart)/1000);
   if(sessionDistM>10&&dur>5){
-    sessions.unshift({id:Date.now(),type:activityType,date:new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}),time:new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}),distanceKm:(sessionDistM/1000).toFixed(2),durationSec:dur,tilesRevealed:sessionTiles,elevGain:Math.round(sessionElevGain)});
+    const sess={id:Date.now(),type:activityType,date:new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}),time:new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}),distanceKm:(sessionDistM/1000).toFixed(2),durationSec:dur,tilesRevealed:sessionTiles,elevGain:Math.round(sessionElevGain),distM:sessionDistM,newTiles:sessionTiles};
+    sessions.unshift(sess);
     if(sessions.length>50)sessions.pop();
     localStorage.setItem('et_sessions',JSON.stringify(sessions));
     localStorage.setItem('et_total_dist',totalDistM.toString());
     el('stat-sessions').textContent=sessions.length;
+    fbSaveSession(sess);
+    if(sessionTiles>0) fbSaveExplored(exploredPts.slice(-sessionTiles));
     updateChallenges();
     updateExpQuestProgress();
   }
@@ -3477,10 +3497,11 @@ requestAnimationFrame(()=>requestAnimationFrame(updateAllCards));
   }
 })();
 
-// ---- Auth logic ----
+// ---- Firebase Auth logic ----
 let _pendingVerifyEmail = '';
 let _pendingVerifyCode  = '';
 let _pendingVerifyName  = '';
+let _fbUser = null; // current Firebase user
 
 // Wire up code-box auto-advance / backspace
 (function(){
@@ -3516,17 +3537,33 @@ function showAuthView(name) {
 }
 
 function showAuthScreen() {
-  const saved = localStorage.getItem('ww_user');
-  if (saved) {
-    // Returning user — straight to welcome (brief) then home
-    const user = JSON.parse(saved);
-    showWelcomeView(user.name, true);
-    const auth = document.getElementById('auth-screen');
-    if (auth) requestAnimationFrame(() => auth.classList.add('visible'));
-    return;
-  }
-  const auth = document.getElementById('auth-screen');
-  if (auth) requestAnimationFrame(() => auth.classList.add('visible'));
+  // Firebase handles session persistence — check auth state first
+  fbAuth.onAuthStateChanged(async user => {
+    if (user) {
+      _fbUser = user;
+      // Check email verified
+      if (!user.emailVerified && !user.isAnonymous) {
+        showVerifyWaitView(user.email);
+        const auth = document.getElementById('auth-screen');
+        if (auth) requestAnimationFrame(() => auth.classList.add('visible'));
+        return;
+      }
+      // Returning verified user — get their name from Firestore
+      try {
+        const doc = await fbDb.collection('users').doc(user.uid).get();
+        const name = doc.exists ? doc.data().name : (user.displayName || 'Explorer');
+        showWelcomeView(name, true);
+      } catch(e) {
+        showWelcomeView(user.displayName || 'Explorer', true);
+      }
+      const auth = document.getElementById('auth-screen');
+      if (auth) requestAnimationFrame(() => auth.classList.add('visible'));
+    } else {
+      // No session — show login
+      const auth = document.getElementById('auth-screen');
+      if (auth) requestAnimationFrame(() => auth.classList.add('visible'));
+    }
+  });
 }
 
 function dismissAuthScreen(cb) {
@@ -3550,79 +3587,107 @@ function switchAuthTab(tab) {
   document.getElementById('signup-error').textContent = '';
 }
 
-function submitLogin(e) {
+async function submitLogin(e) {
   e.preventDefault();
   const email = document.getElementById('login-email').value.trim();
   const pass  = document.getElementById('login-password').value;
   const errEl = document.getElementById('login-error');
-  const users = JSON.parse(localStorage.getItem('ww_users') || '{}');
-  if (!users[email])                              { errEl.textContent = 'No account found with that email.'; return; }
-  if (users[email].password !== btoa(pass))       { errEl.textContent = 'Incorrect password.'; return; }
-  localStorage.setItem('ww_user', JSON.stringify({ name: users[email].name, email }));
-  showWelcomeView(users[email].name, true);
+  const btn   = e.target.querySelector('.auth-submit-btn');
+  btn.disabled = true; btn.textContent = 'SIGNING IN…';
+  try {
+    const cred = await fbAuth.signInWithEmailAndPassword(email, pass);
+    _fbUser = cred.user;
+    if (!cred.user.emailVerified) {
+      showVerifyWaitView(email);
+      btn.disabled = false; btn.textContent = 'LOGIN →';
+      return;
+    }
+    const doc  = await fbDb.collection('users').doc(cred.user.uid).get();
+    const name = doc.exists ? doc.data().name : (cred.user.displayName || 'Explorer');
+    showWelcomeView(name, true);
+  } catch(err) {
+    errEl.textContent = friendlyAuthError(err.code);
+    btn.disabled = false; btn.textContent = 'LOGIN →';
+  }
 }
 
-function submitSignup(e) {
+async function submitSignup(e) {
   e.preventDefault();
   const name    = document.getElementById('signup-name').value.trim();
   const email   = document.getElementById('signup-email').value.trim();
   const pass    = document.getElementById('signup-password').value;
   const confirm = document.getElementById('signup-confirm').value;
   const errEl   = document.getElementById('signup-error');
-  if (pass.length < 6)      { errEl.textContent = 'Password must be at least 6 characters.'; return; }
-  if (pass !== confirm)     { errEl.textContent = 'Passwords do not match.'; return; }
-  const users = JSON.parse(localStorage.getItem('ww_users') || '{}');
-  if (users[email])         { errEl.textContent = 'An account with that email already exists.'; return; }
-  // Save user (unverified)
-  users[email] = { name, password: btoa(pass), verified: false };
-  localStorage.setItem('ww_users', JSON.stringify(users));
-  // Generate + show verification code
-  _pendingVerifyEmail = email;
-  _pendingVerifyName  = name;
-  _pendingVerifyCode  = generateVerifyCode();
-  localStorage.setItem('ww_verify_' + email, _pendingVerifyCode);
-  showVerifyView(email);
+  const btn     = e.target.querySelector('.auth-submit-btn');
+  if (pass.length < 6)  { errEl.textContent = 'Password must be at least 6 characters.'; return; }
+  if (pass !== confirm) { errEl.textContent = 'Passwords do not match.'; return; }
+  btn.disabled = true; btn.textContent = 'CREATING ACCOUNT…';
+  try {
+    const cred = await fbAuth.createUserWithEmailAndPassword(email, pass);
+    _fbUser = cred.user;
+    _pendingVerifyName = name;
+    await fbDb.collection('users').doc(cred.user.uid).set({
+      name, email,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      totalDistM: 0, tilesRevealed: 0
+    });
+    await cred.user.updateProfile({ displayName: name });
+    await cred.user.sendEmailVerification();
+    showVerifyWaitView(email);
+  } catch(err) {
+    errEl.textContent = friendlyAuthError(err.code);
+    btn.disabled = false; btn.textContent = 'CREATE ACCOUNT →';
+  }
 }
 
 function generateVerifyCode() {
   return String(Math.floor(100000 + Math.random() * 900000));
 }
 
-function showVerifyView(email) {
+// Firebase now handles verification via email link — show a waiting screen
+function showVerifyWaitView(email) {
   document.getElementById('auth-verify-email').textContent = email;
-  document.getElementById('auth-demo-code').textContent    = _pendingVerifyCode;
   document.getElementById('auth-verify-error').textContent = '';
-  document.querySelectorAll('.auth-code-box').forEach(b => b.value = '');
+  // Hide code inputs and demo hint — not needed with real email verification
+  const codeInputs = document.getElementById('auth-code-inputs');
+  const demoHint   = document.getElementById('auth-demo-hint');
+  const verifyBtn  = document.querySelector('#auth-verify-view .auth-submit-btn');
+  if (codeInputs) codeInputs.style.display = 'none';
+  if (demoHint)   demoHint.style.display   = 'none';
+  if (verifyBtn)  verifyBtn.style.display  = 'none';
+  // Update subtitle
+  const sub = document.getElementById('auth-verify-sub');
+  if (sub) sub.innerHTML = `A verification link has been sent to<br><span id="auth-verify-email">${email}</span><br><br>Click the link in your email, then tap below.`;
   showAuthView('auth-verify-view');
-  setTimeout(() => {
-    const first = document.querySelector('.auth-code-box');
-    if (first) first.focus();
-  }, 300);
 }
 
-function resendCode() {
-  _pendingVerifyCode = generateVerifyCode();
-  localStorage.setItem('ww_verify_' + _pendingVerifyEmail, _pendingVerifyCode);
-  document.getElementById('auth-demo-code').textContent    = _pendingVerifyCode;
-  document.getElementById('auth-verify-error').textContent = '';
-  document.querySelectorAll('.auth-code-box').forEach(b => b.value = '');
-  const first = document.querySelector('.auth-code-box');
-  if (first) first.focus();
+async function resendCode() {
+  const errEl = document.getElementById('auth-verify-error');
+  try {
+    if (_fbUser) await _fbUser.sendEmailVerification();
+    errEl.style.color = '#4ade80';
+    errEl.textContent = 'Verification email resent.';
+    setTimeout(() => { errEl.textContent = ''; errEl.style.color = ''; }, 3000);
+  } catch(err) {
+    errEl.style.color = '';
+    errEl.textContent = 'Could not resend — try again shortly.';
+  }
 }
 
-function verifyCode() {
-  const entered = Array.from(document.querySelectorAll('.auth-code-box')).map(b => b.value).join('');
-  const errEl   = document.getElementById('auth-verify-error');
-  if (entered.length < 6)              { errEl.textContent = 'Please enter all 6 digits.'; return; }
-  const stored = localStorage.getItem('ww_verify_' + _pendingVerifyEmail);
-  if (entered !== stored)              { errEl.textContent = 'Incorrect code. Please try again.'; return; }
-  // Mark verified
-  const users = JSON.parse(localStorage.getItem('ww_users') || '{}');
-  if (users[_pendingVerifyEmail]) users[_pendingVerifyEmail].verified = true;
-  localStorage.setItem('ww_users', JSON.stringify(users));
-  localStorage.removeItem('ww_verify_' + _pendingVerifyEmail);
-  localStorage.setItem('ww_user', JSON.stringify({ name: _pendingVerifyName, email: _pendingVerifyEmail }));
-  showWelcomeView(_pendingVerifyName, false);
+async function verifyCode() {
+  // This is now "I've verified my email" button
+  const errEl = document.getElementById('auth-verify-error');
+  try {
+    await _fbUser.reload();
+    if (_fbUser.emailVerified) {
+      showWelcomeView(_pendingVerifyName || _fbUser.displayName || 'Explorer', false);
+    } else {
+      errEl.style.color = '';
+      errEl.textContent = 'Email not verified yet. Check your inbox and click the link first.';
+    }
+  } catch(err) {
+    errEl.textContent = 'Something went wrong. Please try again.';
+  }
 }
 
 // ---- Welcome view ----
@@ -3677,13 +3742,79 @@ function showWelcomeView(name, returning) {
   showAuthView('auth-welcome-view');
 }
 
-function enterWanderworld() {
+async function enterWanderworld() {
+  await fbLoadExplored();
   enterHomeFromAuth();
 }
 
-function enterAsGuest() {
-  localStorage.removeItem('ww_user');
+async function enterAsGuest() {
+  try {
+    const cred = await fbAuth.signInAnonymously();
+    _fbUser = cred.user;
+  } catch(e) { /* offline — proceed anyway */ }
   enterHomeFromAuth();
+}
+
+function friendlyAuthError(code) {
+  const map = {
+    'auth/user-not-found':       'No account found with that email.',
+    'auth/wrong-password':       'Incorrect password.',
+    'auth/email-already-in-use': 'An account with that email already exists.',
+    'auth/invalid-email':        'Please enter a valid email address.',
+    'auth/weak-password':        'Password must be at least 6 characters.',
+    'auth/too-many-requests':    'Too many attempts. Please wait a moment.',
+    'auth/network-request-failed': 'Network error. Check your connection.',
+    'auth/invalid-credential':   'Incorrect email or password.',
+  };
+  return map[code] || 'Something went wrong. Please try again.';
+}
+
+// ---- Firestore data sync ----
+async function fbSaveSession(session) {
+  if (!_fbUser || _fbUser.isAnonymous) return;
+  try {
+    await fbDb.collection('users').doc(_fbUser.uid)
+      .collection('sessions').add({
+        ...session,
+        ts: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    // Update totals on user doc
+    await fbDb.collection('users').doc(_fbUser.uid).update({
+      totalDistM:   firebase.firestore.FieldValue.increment(session.distM || 0),
+      tilesRevealed: firebase.firestore.FieldValue.increment(session.newTiles || 0)
+    });
+  } catch(e) { console.warn('fbSaveSession:', e); }
+}
+
+async function fbSaveExplored(tiles) {
+  if (!_fbUser || _fbUser.isAnonymous || !tiles.length) return;
+  try {
+    const batch = fbDb.batch();
+    const ref = fbDb.collection('users').doc(_fbUser.uid).collection('explored');
+    tiles.forEach(t => {
+      const key = `${Math.floor(t.lat/0.0003)}_${Math.floor(t.lng/0.0003)}`;
+      batch.set(ref.doc(key), { lat: t.lat, lng: t.lng }, { merge: true });
+    });
+    await batch.commit();
+  } catch(e) { console.warn('fbSaveExplored:', e); }
+}
+
+async function fbLoadExplored() {
+  if (!_fbUser || _fbUser.isAnonymous) return;
+  try {
+    const snap = await fbDb.collection('users').doc(_fbUser.uid).collection('explored').get();
+    if (snap.empty) return;
+    const tiles = snap.docs.map(d => d.data());
+    // Merge with local — add any cloud tiles not already in local storage
+    const local = JSON.parse(localStorage.getItem('et_explored') || '[]');
+    const localKeys = new Set(local.map(t => `${Math.floor(t.lat/0.0003)}_${Math.floor(t.lng/0.0003)}`));
+    const merged = [...local];
+    tiles.forEach(t => {
+      const k = `${Math.floor(t.lat/0.0003)}_${Math.floor(t.lng/0.0003)}`;
+      if (!localKeys.has(k)) merged.push(t);
+    });
+    localStorage.setItem('et_explored', JSON.stringify(merged));
+  } catch(e) { console.warn('fbLoadExplored:', e); }
 }
 
 // ---- Theme system ----
