@@ -66,7 +66,7 @@
     .screen.hidden { opacity:0; pointer-events:none; transform:scale(0.96); }
 
     .back-btn {
-      position:absolute; top:52px; left:18px; z-index:100;
+      position:absolute; top:max(52px, calc(env(safe-area-inset-top, 0px) + 12px)); left:18px; z-index:100;
       background:rgba(0,0,0,0.5); border:1px solid rgba(255,255,255,0.12);
       border-radius:50px; padding:7px 16px 7px 12px;
       font-family:'Orbitron',sans-serif; font-size:0.6rem; font-weight:700; letter-spacing:1px;
@@ -233,7 +233,7 @@
 
     /* ---- PHOTOS SCREEN ---- */
     #screen-photos { background:#100510; }
-    #photos-bg { position:absolute; inset:0; background-image:url('./photo-menu-bg.jpg'); background-size:cover; background-position:center; }
+    #photos-bg { position:absolute; inset:0; background-image:url('./Photo-menu-bg.jpg'); background-size:cover; background-position:center; }
     #photos-bg-overlay { position:absolute; inset:0; background:linear-gradient(to bottom,rgba(16,5,16,0.82) 0%,rgba(16,5,16,0.55) 40%,rgba(16,5,16,0.88) 100%); }
     .photos-header { position:relative; z-index:10; padding:68px 24px 6px; text-align:center; }
     .photos-mode-label { font-family:'Orbitron',sans-serif; font-size:0.6rem; letter-spacing:4px; color:#f472b6; margin-bottom:4px; }
@@ -342,6 +342,8 @@
     #nav-map { position:absolute; inset:0; z-index:5; display:none; }
     #nav-map .leaflet-control-container { display:none; }
 
+    .nav-tiles-neon { filter: hue-rotate(185deg) saturate(8) brightness(0.45) contrast(1.6); }
+
     /* Preview state */
     #nav-preview-state { position:absolute; inset:0; z-index:20; pointer-events:none; display:none; }
     .nav-route-panel { position:absolute; bottom:0; left:0; right:0; pointer-events:all; background:rgba(2,13,26,0.93); border-top:1px solid rgba(14,165,233,0.2); backdrop-filter:blur(16px); padding:18px 22px 34px; }
@@ -376,7 +378,7 @@
 
     /* Active navigation state */
     #nav-active-state { position:absolute; inset:0; z-index:20; pointer-events:none; display:none; }
-    .nav-instruction-panel { position:absolute; top:0; left:0; right:0; pointer-events:all; background:rgba(2,13,26,0.93); border-bottom:1px solid rgba(14,165,233,0.2); backdrop-filter:blur(16px); padding:20px 18px 16px; display:flex; align-items:center; gap:16px; }
+    .nav-instruction-panel { position:absolute; top:0; left:0; right:0; pointer-events:all; background:rgba(2,13,26,0.93); border-bottom:1px solid rgba(14,165,233,0.2); backdrop-filter:blur(16px); padding:max(20px, calc(env(safe-area-inset-top, 0px) + 8px)) 18px 16px; display:flex; align-items:center; gap:16px; }
     .nav-step-arrow { font-size:2.6rem; line-height:1; min-width:52px; text-align:center; flex-shrink:0; }
     .nav-step-main { font-family:'Orbitron',sans-serif; font-size:0.82rem; font-weight:700; letter-spacing:0.5px; color:#fff; line-height:1.4; }
     .nav-step-next { font-family:'Rajdhani',sans-serif; font-size:0.78rem; font-weight:600; color:rgba(255,255,255,0.38); margin-top:4px; }
@@ -554,19 +556,30 @@
     /* Small compass indicator on explorer screen */
     #compass-indicator { position:absolute; top:58px; right:18px; z-index:1000; width:38px; height:38px; }
 
-    #stats-panel { position:absolute; bottom:110px; left:16px; z-index:1000; background:rgba(2,15,5,0.84); backdrop-filter:blur(12px); border:1px solid rgba(74,222,128,0.1); clip-path:polygon(14px 0,100% 0,calc(100% - 14px) 100%,0 100%); padding:12px 18px; min-width:158px; cursor:pointer; }
-    #stats-toggle { font-family:'Orbitron',sans-serif; font-size:0.5rem; text-transform:uppercase; letter-spacing:1.5px; color:rgba(255,255,255,0.2); text-align:right; margin-bottom:7px; }
+    #stats-panel { position:absolute; bottom:90px; left:50%; transform:translateX(-50%); z-index:1000; background:rgba(2,15,5,0.88); backdrop-filter:blur(14px); border:1px solid rgba(74,222,128,0.15); clip-path:polygon(14px 0,100% 0,calc(100% - 14px) 100%,0 100%); padding:0; min-width:220px; cursor:pointer; transition:all 0.25s ease; }
+    #stats-toggle { font-family:'Orbitron',sans-serif; font-size:0.5rem; text-transform:uppercase; letter-spacing:1.5px; color:rgba(255,255,255,0.2); text-align:center; padding:7px 14px 0; }
+    #stats-body { padding:6px 14px 10px; display:grid; grid-template-columns:1fr 1fr; gap:4px 16px; }
     .stat-item { margin-bottom:10px; }
     .stat-item:last-child { margin-bottom:0; }
     .stat-label { font-family:'Orbitron',sans-serif; font-size:0.5rem; text-transform:uppercase; letter-spacing:1.5px; color:rgba(255,255,255,0.28); margin-bottom:1px; }
     .stat-value { font-family:'Orbitron',sans-serif; font-size:1.3rem; font-weight:700; color:#4ade80; line-height:1.1; }
     .stat-unit { font-family:'Rajdhani',sans-serif; font-size:0.75rem; color:rgba(255,255,255,0.3); margin-left:3px; }
 
-    #exp-controls { position:absolute; z-index:1000; display:flex; flex-direction:column; gap:6px; align-items:stretch; width:164px; }
+    #exp-controls { position:absolute; bottom:0; left:0; right:0; z-index:1001; background:rgba(2,8,4,0.97); backdrop-filter:blur(18px); border-top:1px solid rgba(74,222,128,0.12); border-radius:20px 20px 0 0; padding:8px 20px max(24px, env(safe-area-inset-bottom, 24px)); transform:translateY(100%); transition:transform 0.32s cubic-bezier(0.32,0.72,0,1); display:flex; flex-direction:column; gap:8px; }
+    #exp-controls.open { transform:translateY(0); }
+    #exp-controls-handle { width:36px; height:4px; background:rgba(255,255,255,0.13); border-radius:2px; margin:10px auto 12px; }
+    #exp-controls-row { display:flex; gap:8px; }
+    #exp-fab-wrap { position:absolute; bottom:max(28px, env(safe-area-inset-bottom, 28px)); left:50%; transform:translateX(-50%); z-index:1002; display:flex; flex-direction:column; align-items:center; gap:6px; pointer-events:all; }
+    #track-btn { width:64px; height:64px; border-radius:50%; border:none; background:#4ade80; color:#000; font-family:'Orbitron',sans-serif; font-size:0.5rem; font-weight:700; letter-spacing:1px; cursor:pointer; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; transition:all 0.2s; box-shadow:0 4px 20px rgba(74,222,128,0.4); }
+    #track-btn.tracking { background:#f87171; box-shadow:0 4px 20px rgba(248,113,113,0.45); animation:trackPulse 1.8s ease-in-out infinite; }
+    @keyframes trackPulse { 0%,100%{box-shadow:0 4px 20px rgba(248,113,113,0.4)} 50%{box-shadow:0 4px 32px rgba(248,113,113,0.75)} }
+    #track-btn:hover { transform:scale(1.06); }
+    #track-btn:active { transform:scale(0.94); }
+    .fab-icon { font-size:1.5rem; line-height:1; }
+    .fab-label { font-size:0.45rem; letter-spacing:1.5px; }
+    #exp-menu-btn { position:absolute; bottom:max(36px, env(safe-area-inset-bottom, 36px)); right:22px; z-index:1002; width:44px; height:44px; border-radius:50%; background:rgba(0,0,0,0.6); border:1px solid rgba(74,222,128,0.22); color:rgba(255,255,255,0.65); font-size:1.3rem; cursor:pointer; display:flex; align-items:center; justify-content:center; backdrop-filter:blur(8px); transition:all 0.15s; }
+    #exp-menu-btn:hover { background:rgba(74,222,128,0.12); color:#fff; }
     .btn { padding:10px 20px; border:none; font-family:'Orbitron',sans-serif; font-size:0.6rem; font-weight:700; cursor:pointer; letter-spacing:1.5px; transition:all 0.18s; white-space:nowrap; clip-path:polygon(12px 0,100% 0,calc(100% - 12px) 100%,0 100%); text-align:center; }
-    #track-btn { background:#4ade80; color:#000; }
-    #track-btn.tracking { background:#f87171; color:#fff; }
-    #track-btn:hover { opacity:0.88; transform:scale(1.03); }
     .btn-secondary { background:rgba(255,255,255,0.07); color:rgba(255,255,255,0.6); border:1px solid rgba(255,255,255,0.12); }
     .btn-secondary:hover { background:rgba(255,255,255,0.13); }
 
@@ -644,7 +657,7 @@
     #wx-key-status.not-set { color:rgba(248,113,113,0.6); }
 
     /* ---- Session live badge ---- */
-    #session-badge { position:absolute; bottom:110px; right:16px; z-index:1000; background:rgba(2,15,5,0.88); backdrop-filter:blur(12px); border:1px solid rgba(74,222,128,0.14); clip-path:polygon(12px 0,100% 0,calc(100% - 12px) 100%,0 100%); padding:10px 16px; display:none; min-width:110px; }
+    #session-badge { position:absolute; bottom:max(108px, calc(env(safe-area-inset-bottom, 28px) + 80px)); left:50%; transform:translateX(-50%); z-index:1002; background:rgba(2,15,5,0.92); backdrop-filter:blur(12px); border:1px solid rgba(74,222,128,0.2); clip-path:polygon(10px 0,100% 0,calc(100% - 10px) 100%,0 100%); padding:6px 18px; display:none; white-space:nowrap; pointer-events:none; }
     #session-badge.active { display:block; }
     .sb-label { font-family:'Orbitron',sans-serif; font-size:0.45rem; text-transform:uppercase; letter-spacing:1.5px; color:rgba(255,255,255,0.25); margin-bottom:2px; }
     .sb-val { font-family:'Orbitron',sans-serif; font-size:1.1rem; font-weight:700; color:#4ade80; }
@@ -850,7 +863,7 @@
 
     /* ---- Nav layer switcher button ---- */
     #nav-layer-btn {
-      position:absolute; bottom:146px; left:14px; z-index:30;
+      position:absolute; bottom:172px; left:14px; z-index:30;
       background:rgba(2,13,26,0.82); border:1px solid rgba(14,165,233,0.28);
       border-radius:8px; padding:6px 11px;
       font-family:'Orbitron',sans-serif; font-size:0.48rem; font-weight:700; letter-spacing:1.5px;
@@ -858,6 +871,12 @@
       transition:background 0.15s; display:none;
     }
     #nav-layer-btn:hover { background:rgba(14,165,233,0.15); }
+
+    /* ---- Nav language selector ---- */
+    .nav-lang-section { margin:16px 24px 4px; }
+    .nav-lang-title { font-family:'Orbitron',sans-serif; font-size:0.48rem; letter-spacing:2.5px; color:rgba(255,255,255,0.22); margin-bottom:8px; }
+    #nav-lang-select { width:100%; background:rgba(14,165,233,0.07); border:1px solid rgba(14,165,233,0.22); color:rgba(255,255,255,0.7); font-family:'Rajdhani',sans-serif; font-size:0.88rem; font-weight:600; padding:9px 12px; border-radius:0; outline:none; appearance:none; -webkit-appearance:none; cursor:pointer; }
+    #nav-lang-select option { background:#0a1020; color:#fff; }
 
     /* ---- Nav voice selector ---- */
     .nav-voice-section { margin:12px 24px 8px; }
@@ -874,7 +893,7 @@
 
     /* ---- Theme button ---- */
     #theme-btn {
-      position:fixed; top:52px; right:18px; z-index:1010;
+      position:fixed; top:max(108px, calc(env(safe-area-inset-top, 0px) + 60px)); right:18px; z-index:1010;
       background:rgba(0,0,0,0.45); border:1px solid rgba(255,255,255,0.1);
       border-radius:50%; width:36px; height:36px;
       display:flex; align-items:center; justify-content:center;
@@ -1512,8 +1531,25 @@
       <div class="nav-recent-title">RECENT DESTINATIONS</div>
       <div id="nav-recent-list"></div>
     </div>
+    <div class="nav-lang-section">
+      <div class="nav-lang-title">LANGUAGE</div>
+      <select id="nav-lang-select" onchange="navSetLanguage(this.value)">
+        <option value="en">English</option>
+        <option value="es">Español</option>
+        <option value="fr">Français</option>
+        <option value="de">Deutsch</option>
+        <option value="it">Italiano</option>
+        <option value="pt">Português</option>
+        <option value="ja">日本語</option>
+        <option value="zh">中文</option>
+        <option value="ar">العربية</option>
+        <option value="hi">हिन्दी</option>
+        <option value="ko">한국어</option>
+        <option value="ru">Русский</option>
+      </select>
+    </div>
     <div class="nav-voice-section">
-      <div class="nav-voice-title">NAVIGATION VOICE</div>
+      <div class="nav-voice-title">VOICE</div>
       <div id="nav-voice-list"></div>
     </div>
   </div>
@@ -1864,7 +1900,7 @@
   <div id="coords-display" style="right:18px;top:102px">---.-----, ---.-----</div>
 
   <div id="stats-panel" onclick="toggleStats()">
-    <div id="stats-toggle">▾ STATS</div>
+    <div id="stats-toggle">STATS ▾</div>
     <div id="stats-body">
       <div class="stat-item"><div class="stat-label">Distance</div><div class="stat-value"><span id="stat-distance">0.00</span><span class="stat-unit">km</span></div></div>
       <div class="stat-item"><div class="stat-label">Session</div><div class="stat-value" id="stat-time">00:00</div></div>
@@ -1876,14 +1912,30 @@
     </div>
   </div>
 
-  <div id="exp-controls">
-    <button class="btn" id="track-btn" onclick="toggleTracking()">START TRACKING</button>
-    <button class="btn btn-secondary" onclick="openHistory()">HISTORY</button>
-    <button class="btn btn-secondary" onclick="openRegions()">REGIONS</button>
-    <button class="btn btn-secondary" onclick="openQuests()">QUESTS</button>
-    <button class="btn btn-secondary" onclick="openSharePanel()">SHARE</button>
-    <button class="btn btn-secondary" id="offline-btn" onclick="openOfflinePanel()">OFFLINE</button>
+  <!-- FAB: tracking button -->
+  <div id="exp-fab-wrap">
+    <button id="track-btn" onclick="toggleTracking()">
+      <span class="fab-icon" id="fab-icon">▶</span>
+      <span class="fab-label" id="fab-label">TRACK</span>
+    </button>
   </div>
+  <!-- Menu button -->
+  <button id="exp-menu-btn" onclick="toggleExpControls()">⋮</button>
+  <!-- Bottom drawer: secondary controls -->
+  <div id="exp-controls">
+    <div id="exp-controls-handle" onclick="toggleExpControls()"></div>
+    <div id="exp-controls-row">
+      <button class="btn btn-secondary" style="flex:1" onclick="openHistory();toggleExpControls()">HISTORY</button>
+      <button class="btn btn-secondary" style="flex:1" onclick="openRegions();toggleExpControls()">REGIONS</button>
+      <button class="btn btn-secondary" style="flex:1" onclick="openQuests();toggleExpControls()">QUESTS</button>
+    </div>
+    <div id="exp-controls-row">
+      <button class="btn btn-secondary" style="flex:1" onclick="openSharePanel();toggleExpControls()">SHARE</button>
+      <button class="btn btn-secondary" style="flex:1" id="offline-btn" onclick="openOfflinePanel();toggleExpControls()">OFFLINE</button>
+    </div>
+  </div>
+  <!-- backdrop for controls drawer -->
+  <div id="exp-controls-backdrop" onclick="toggleExpControls()" style="position:absolute;inset:0;z-index:1000;display:none;background:rgba(0,0,0,0.3)"></div>
 
   <!-- Discover & Learn — compact strip -->
   <div id="discover-card">
@@ -2118,6 +2170,9 @@ let navSteps=[], navCurrentStep=0;
 let navRemainingDist=0, navProfile='driving';
 let navRoutes=[], navSelectedRouteIdx=0; // fog-aware routing
 let navVoiceMuted=false, navWatchId=null;
+let navHeading = 0, navHeadingActive = false;
+let navLastUserPos = null;
+let navSearchLang = localStorage.getItem('wt_nav_lang') || 'en';
 let navNavState='search'; // 'search' | 'preview' | 'active'
 let navDestCoords=null, navDestName='';
 let navSearchTimeout=null;
@@ -2127,11 +2182,12 @@ let navSelectedVoice=null, navVoiceIdx=parseInt(localStorage.getItem('wt_nav_voi
 const NAV_LAYERS={
   map:       {url:'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',      label:'MAP',   opts:{maxZoom:19}},
   satellite: {url:'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', label:'SAT',   opts:{maxZoom:19}},
-  night:     {url:'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', label:'NIGHT', opts:{maxZoom:19}}
+  night:     {url:'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', label:'NIGHT', opts:{maxZoom:19}},
+  neon:      {url:'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', label:'NEON',  opts:{maxZoom:19, className:'nav-tiles-neon'}}
 };
 
 function navCycleLayer(){
-  const modes=['map','satellite','night'];
+  const modes=['map','satellite','night','neon'];
   navLayerMode=modes[(modes.indexOf(navLayerMode)+1)%modes.length];
   if(navTileLayer&&navMap) navMap.removeLayer(navTileLayer);
   const cfg=NAV_LAYERS[navLayerMode];
@@ -2142,29 +2198,71 @@ function navCycleLayer(){
 
 function navLoadVoices(){
   if(!window.speechSynthesis) return;
-  const voices=speechSynthesis.getVoices().filter(v=>v.lang.startsWith('en'));
+  const lang = navSearchLang || 'en';
+  let voices = speechSynthesis.getVoices().filter(v => v.lang.toLowerCase().startsWith(lang.toLowerCase()));
+  // Fallback to all voices if none match
+  if (!voices.length) voices = speechSynthesis.getVoices().slice(0, 8);
   if(!voices.length) return;
   const list=el('nav-voice-list');
   if(!list) return;
-  const idx=Math.min(navVoiceIdx,voices.length-1);
+  const idx=Math.min(navVoiceIdx, voices.length-1);
   navSelectedVoice=voices[idx]||null;
-  list.innerHTML=voices.slice(0,6).map((v,i)=>{
-    const name=v.name.replace(/\s*\(.*\)\s*$/,'').slice(0,26);
-    return `<div class="nav-voice-pill${i===idx?' active':''}" onclick="navSelectVoice(${i})">${name}</div>`;
+  list.innerHTML=voices.slice(0,8).map((v,i)=>{
+    const name=v.name.replace(/\s*\(.*\)\s*$/,'').slice(0,22);
+    const locale = v.lang.slice(0,5);
+    return `<div class="nav-voice-pill${i===idx?' active':''}" onclick="navSelectVoice(${i})">${name} <span style="font-size:0.65em;opacity:0.5">${locale}</span></div>`;
   }).join('');
 }
 
 function navSelectVoice(idx){
   navVoiceIdx=idx;
   localStorage.setItem('wt_nav_voice',idx);
-  const voices=speechSynthesis.getVoices().filter(v=>v.lang.startsWith('en'));
+  const lang = navSearchLang || 'en';
+  let voices = speechSynthesis.getVoices().filter(v=>v.lang.toLowerCase().startsWith(lang.toLowerCase()));
+  if(!voices.length) voices = speechSynthesis.getVoices().slice(0,8);
   navSelectedVoice=voices[idx]||null;
   document.querySelectorAll('.nav-voice-pill').forEach((p,i)=>p.classList.toggle('active',i===idx));
   navAnnounce('Voice selected');
 }
 
+function navSetLanguage(lang) {
+  navSearchLang = lang;
+  localStorage.setItem('wt_nav_lang', lang);
+  // Reload voices for this language
+  navLoadVoices();
+  // Update search placeholder
+  const ph = {'en':'Search destination…','es':'Buscar destino…','fr':'Chercher destination…','de':'Ziel suchen…','it':'Cerca destinazione…','pt':'Pesquisar destino…','ja':'目的地を検索…','zh':'搜索目的地…','ar':'البحث عن وجهة…','hi':'गंतव्य खोजें…','ko':'목적지 검색…','ru':'Поиск места…'};
+  const inp = el('nav-search-input');
+  if(inp) inp.placeholder = ph[lang] || 'Search destination…';
+}
+
 if(window.speechSynthesis){
   speechSynthesis.addEventListener('voiceschanged',navLoadVoices);
+}
+
+function navStartHeadingSensor() {
+  if (navHeadingActive) return;
+  navHeadingActive = true;
+  const handler = (e) => {
+    if (e.webkitCompassHeading != null) navHeading = e.webkitCompassHeading;
+    else if (e.absolute && e.alpha != null) navHeading = (360 - e.alpha) % 360;
+    else if (e.alpha != null) navHeading = (360 - e.alpha) % 360;
+    if (navUserMarker && navUserMarker._icon) {
+      navUserMarker._icon.style.transform = `rotate(${navHeading}deg)`;
+    }
+  };
+  window.addEventListener('deviceorientationabsolute', handler, true);
+  window.addEventListener('deviceorientation', handler, true);
+}
+
+function navArrowIcon(color) {
+  color = color || '#0ea5e9';
+  return L.divIcon({
+    className: '',
+    html: `<svg width="28" height="28" viewBox="0 0 28 28" style="transform-origin:14px 14px;filter:drop-shadow(0 0 4px ${color})"><polygon points="14,2 20,22 14,18 8,22" fill="${color}" stroke="#fff" stroke-width="1.5" stroke-linejoin="round"/></svg>`,
+    iconSize: [28, 28],
+    iconAnchor: [14, 14]
+  });
 }
 
 function navEnterScreen(){
@@ -2172,6 +2270,9 @@ function navEnterScreen(){
   navSetState('search');
   navRenderRecent();
   navLoadVoices();
+  const langSel = el('nav-lang-select');
+  if(langSel) langSel.value = navSearchLang;
+  navigator.geolocation.getCurrentPosition(p => { navLastUserPos = {lat:p.coords.latitude, lon:p.coords.longitude}; }, ()=>{}, {timeout:5000});
 }
 
 function navInitMap(){
@@ -2219,16 +2320,35 @@ function navSetState(state){
 
 async function navDoSearch(q){
   try{
-    const r=await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=5&addressdetails=1`,
-      {headers:{'Accept-Language':'en'}});
+    // Filter matching recents first
+    const recents = JSON.parse(localStorage.getItem('wt_nav_recent')||'[]');
+    const ql = q.toLowerCase();
+    const matchingRecents = recents.filter(r => r.name.toLowerCase().includes(ql)).slice(0,3);
+
+    let url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=5&addressdetails=1`;
+    if(navLastUserPos){
+      const {lat,lon} = navLastUserPos;
+      const d = 0.5;
+      url += `&viewbox=${lon-d},${lat+d},${lon+d},${lat-d}&bounded=0`;
+    }
+    const r=await fetch(url, {headers:{'Accept-Language': navSearchLang || 'en'}});
     const data=await r.json();
     el('nav-search-loading').style.display='none';
     const box=el('nav-search-results');
-    if(!data.length){
+
+    const recentHtml = matchingRecents.map(rc => {
+      const safeName = encodeURIComponent(rc.name.slice(0,70));
+      return `<div class="nav-result-item nav-result-recent" onclick="navSelectDest(${rc.lat},${rc.lon},decodeURIComponent('${safeName}'))">
+        <div class="nav-result-icon" style="opacity:0.55;font-size:0.85rem">🕐</div>
+        <div><div class="nav-result-name">${rc.name.split(',')[0]}</div><div class="nav-result-addr" style="color:rgba(56,189,248,0.45);font-size:0.65rem">RECENT</div></div>
+      </div>`;
+    }).join('');
+
+    if(!data.length && !matchingRecents.length){
       box.innerHTML='<div class="nav-result-item"><div class="nav-result-icon">🔍</div><div><div class="nav-result-name">No results found</div></div></div>';
       box.style.display='block'; return;
     }
-    box.innerHTML=data.map(item=>{
+    box.innerHTML = recentHtml + data.map(item=>{
       const name=item.name||item.display_name.split(',')[0];
       const addr=item.display_name.split(',').slice(1,3).join(',').trim();
       const safeName=(name+', '+addr).replace(/['"]/g,'').slice(0,70);
@@ -2394,8 +2514,10 @@ function navDrawRoutes(from,to){
   navRouteLayer=L.polyline(navRoutes[sel].coords,
     {color:selColor,weight:6,opacity:0.92,lineJoin:'round',lineCap:'round'}).addTo(navMap);
 
-  navUserMarker=L.circleMarker([from.lat,from.lon],
-    {radius:9,color:'#fff',weight:2.5,fillColor:sel===0?'#0ea5e9':'#a855f7',fillOpacity:1}).addTo(navMap);
+  const arrowColor = sel===0 ? '#0ea5e9' : '#a855f7';
+  navUserMarker = L.marker([from.lat,from.lon], {icon: navArrowIcon(arrowColor), zIndexOffset: 1000}).addTo(navMap);
+  if (navUserMarker._icon) navUserMarker._icon.querySelector('svg').style.transform = `rotate(${navHeading}deg)`;
+  navStartHeadingSensor();
   navDestMarker=L.marker([to.lat,to.lon],{icon:navPinIcon()}).addTo(navMap);
   navMap.fitBounds(navRouteLayer.getBounds(),{padding:[80,60]});
 }
@@ -2469,6 +2591,7 @@ function navStartNavigation(){
     el('nav-step-next').textContent='GPS will guide your remaining distance';
   }
   navUpdateStatusBar();
+  navStartHeadingSensor();
   if(navWatchId!=null){navigator.geolocation.clearWatch(navWatchId);}
   navWatchId=navigator.geolocation.watchPosition(
     pos=>navUpdatePosition(pos),
@@ -2480,7 +2603,7 @@ function navStartNavigation(){
 function navUpdatePosition(pos){
   const lat=pos.coords.latitude,lon=pos.coords.longitude;
   if(navUserMarker) navUserMarker.setLatLng([lat,lon]);
-  else navUserMarker=L.circleMarker([lat,lon],{radius:8,color:'#fff',weight:2,fillColor:'#0ea5e9',fillOpacity:1}).addTo(navMap);
+  else { navUserMarker=L.marker([lat,lon],{icon:navArrowIcon(navSelectedRouteIdx===1?'#a855f7':'#0ea5e9'),zIndexOffset:1000}).addTo(navMap); navStartHeadingSensor(); }
   if(navNavState==='active') navMap.setView([lat,lon],Math.max(navMap.getZoom(),16));
   if(navDestCoords){
     navRemainingDist=navHaversine(lat,lon,navDestCoords.lat,navDestCoords.lon);
@@ -3005,10 +3128,13 @@ function startTracking(){
   el('elev-profile-stats').textContent='+0 m gain · -- m peak';
   el('sb-elev-gain').textContent='0';
   el('stat-elev-gain').textContent='0';
-  el('track-btn').textContent='STOP TRACKING';el('track-btn').classList.add('tracking');
+  el('track-btn').classList.add('tracking');
+  const fabIcon = el('fab-icon'), fabLabel = el('fab-label');
+  if(fabIcon) fabIcon.textContent = '■';
+  if(fabLabel) fabLabel.textContent = 'STOP';
   el('gps-dot').classList.add('active');el('gps-status').textContent='ACQUIRING…';
   el('session-badge').classList.add('active');
-  if(!statsExpanded){statsExpanded=true;el('stats-body').style.display='';el('stats-toggle').textContent='▾ STATS';}
+  if(!statsExpanded){statsExpanded=true;el('stats-body').style.display='';el('stats-toggle').textContent='STATS ▾';}
   timerHandle=setInterval(tickTimer,1000);
   trackPolyline=L.polyline([],{color:ACTIVITY_COLORS[activityType],weight:3,opacity:0.75}).addTo(map);
   watchId=navigator.geolocation.watchPosition(onPosition,()=>{el('gps-status').textContent='GPS ERROR';},{enableHighAccuracy:true,maximumAge:4000,timeout:12000});
@@ -3016,7 +3142,10 @@ function startTracking(){
 function stopTracking(){
   isTracking=false; if(watchId!==null){navigator.geolocation.clearWatch(watchId);watchId=null;}
   clearInterval(timerHandle);
-  el('track-btn').textContent='START TRACKING';el('track-btn').classList.remove('tracking');
+  el('track-btn').classList.remove('tracking');
+  const fabIcon = el('fab-icon'), fabLabel = el('fab-label');
+  if(fabIcon) fabIcon.textContent = '▶';
+  if(fabLabel) fabLabel.textContent = 'TRACK';
   el('gps-dot').classList.remove('active');el('gps-status').textContent='GPS OFF';el('stat-speed').textContent='0';
   el('session-badge').classList.remove('active');
   el('exp-elev-chart').classList.remove('tracking');
@@ -3128,7 +3257,7 @@ function updateMarker(lat,lng,acc){
 
 // ---- Stats / achievements / history ----
 function updateStats(){el('stat-explored').textContent=exploredKeys.size.toLocaleString();el('stat-sessions').textContent=sessions.length;}
-function toggleStats(){statsExpanded=!statsExpanded;el('stats-body').style.display=statsExpanded?'':'none';el('stats-toggle').textContent=statsExpanded?'▾ STATS':'▸ STATS';}
+function toggleStats(){statsExpanded=!statsExpanded;el('stats-body').style.display=statsExpanded?'':'none';el('stats-toggle').textContent=statsExpanded?'STATS ▾':'STATS ▸';}
 function tickTimer(){const s=Math.floor((Date.now()-sessionStart)/1000);el('stat-time').textContent=String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');}
 function checkAchievements(){
   ACHIEVEMENTS.forEach(a=>{
@@ -4168,6 +4297,27 @@ function makeDraggable(elem, defaultLeft, defaultTop) {
   }
 }
 
+function makePinchable(elem) {
+  if (!elem) return;
+  let startDist = 0, startScale = parseFloat(elem.dataset.scale || '1');
+  elem.addEventListener('touchstart', e => {
+    if (e.touches.length === 2) {
+      startDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+      startScale = parseFloat(elem.dataset.scale || '1');
+      e.preventDefault();
+    }
+  }, { passive: false });
+  elem.addEventListener('touchmove', e => {
+    if (e.touches.length === 2) {
+      const dist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+      const scale = Math.min(2.5, Math.max(0.4, startScale * (dist / startDist)));
+      elem.dataset.scale = scale;
+      elem.style.transform = elem.style.transform.replace(/scale\([^)]+\)/,'') + ` scale(${scale})`;
+      e.preventDefault();
+    }
+  }, { passive: false });
+}
+
 (function initDraggables() {
   const W = window.innerWidth;
   const H = window.innerHeight;
@@ -4184,20 +4334,32 @@ function makeDraggable(elem, defaultLeft, defaultTop) {
   // explorer UI — live elevation chart overlay
   makeDraggable(document.getElementById('exp-elev-chart'),    16,                   H - 290);
   // explorer UI — bottom-right session badge
-  makeDraggable(document.getElementById('session-badge'),     W - 150,              H - 182);
+  makeDraggable(document.getElementById('session-badge'),     Math.round(W/2) - 80, H - 182);
   // explorer UI — left-center zoom
   makeDraggable(document.getElementById('map-zoom'),          16,                   Math.round(H / 2) - 40);
-  // explorer UI — bottom-left stats
-  makeDraggable(document.getElementById('stats-panel'),       16,                   H - 210);
-  // explorer UI — bottom-center controls
-  makeDraggable(document.getElementById('exp-controls'),      W - 180,              H - 310);
+  // explorer UI — stats panel (centered bottom)
+  makeDraggable(document.getElementById('stats-panel'),       Math.round(W/2) - 110, H - 210);
+  // exp-controls is now a bottom drawer — no draggable needed
   makeDraggable(document.getElementById('discover-toggle'),   W - 128,              154);
   // fitness UI widgets
   makeDraggable(document.getElementById('challenges-btn'),    24,                       Math.round(H * 0.33));
   makeDraggable(document.getElementById('fit-start-btn'),     24,                       Math.round(H * 0.44));
   makeDraggable(document.getElementById('fit-stats-bottom'),  0,                        H - 70);
   makeDraggable(document.getElementById('elev-profile-wrap'), 16,                       Math.round(H * 0.6));
+  makePinchable(document.getElementById('stats-panel'));
+  makePinchable(document.getElementById('session-badge'));
+  makePinchable(document.getElementById('completion-badge'));
 })();
+
+// Double-tap map to toggle explorer UI
+let _expLastTap = 0;
+document.getElementById('map')?.addEventListener('touchend', e => {
+  if (e.target.closest('#map') && !e.target.closest('.leaflet-interactive')) {
+    const now = Date.now();
+    if (now - _expLastTap < 350) toggleExpUI();
+    _expLastTap = now;
+  }
+}, { passive: true });
 
 // ---- Discover & Learn ----
 let discoverMode        = false;
@@ -4692,6 +4854,13 @@ function setExpUI(hidden) {
 }
 
 function toggleExpUI() { setExpUI(!expUIHidden); }
+
+function toggleExpControls() {
+  const c = el('exp-controls');
+  const bd = el('exp-controls-backdrop');
+  const isOpen = c.classList.toggle('open');
+  if (bd) bd.style.display = isOpen ? 'block' : 'none';
+}
 
 // ---- Offline Maps ----
 let offlineSW = null;   // ServiceWorkerRegistration
