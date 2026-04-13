@@ -782,6 +782,20 @@
       transition:background 0.15s;
     }
     #region-name-save:hover { background:rgba(74,222,128,0.28); }
+    /* Glowing trace line via CSS var set at draw time */
+    .leaflet-trace-line path, .leaflet-trace-line polyline {
+      filter: drop-shadow(0 0 5px var(--trace-color,#4ade80))
+              drop-shadow(0 0 12px var(--trace-color,#4ade80));
+    }
+    /* Region boundary toggle button */
+    .region-boundary-btn {
+      font-size:0.58rem; color:rgba(255,255,255,0.22); cursor:pointer;
+      padding:4px 8px; border-radius:6px; border:1px solid transparent;
+      font-family:'Orbitron',sans-serif; letter-spacing:1px;
+      transition:all 0.15s; white-space:nowrap; flex-shrink:0;
+    }
+    .region-boundary-btn:hover { color:rgba(74,222,128,0.75); border-color:rgba(74,222,128,0.22); }
+    .region-boundary-btn.active { color:#4ade80; background:rgba(74,222,128,0.1); border-color:rgba(74,222,128,0.35); }
 
     /* ---- Offline panel ---- */
     #offline-panel { position:absolute; bottom:0; left:0; right:0; z-index:2000; background:rgba(4,12,6,0.97); backdrop-filter:blur(16px); border-top:1px solid rgba(74,222,128,0.12); border-radius:20px 20px 0 0; padding:0 20px 30px; transform:translateY(100%); transition:transform 0.35s cubic-bezier(0.32,0.72,0,1); max-height:72vh; overflow-y:auto; }
@@ -3441,6 +3455,7 @@ let regions=JSON.parse(localStorage.getItem('et_regions')||'[]'), regionLayers=[
 let traceActive=false, tracePoints=[], tracePolyline=null, tracePolygon=null;
 let _marchTimer=null, _pendingPolygon=null, _traceMouseDown=false, _lastTracePx=null;
 let _currentCustomRegion=null;
+let regionBoundaryLayers={}, shownBoundaries=new Set();
 
 function getThemeMainColor(){
   const c=getThemeColors(activeTheme);
@@ -3506,8 +3521,9 @@ function onTraceStart(e){
   const {latlng,px}=_getEventLatLng(e);
   tracePoints=[latlng]; _lastTracePx=px; _traceMouseDown=true;
   const color=getThemeMainColor();
+  document.documentElement.style.setProperty('--trace-color', color);
   if(tracePolyline){map.removeLayer(tracePolyline);}
-  tracePolyline=L.polyline([latlng],{color,weight:2.5,opacity:0.92}).addTo(map);
+  tracePolyline=L.polyline([latlng],{color,weight:4,opacity:1,className:'leaflet-trace-line'}).addTo(map);
 }
 
 function onTraceMove(e){
@@ -3529,7 +3545,8 @@ function onTraceEnd(e){
   if(tracePolyline){map.removeLayer(tracePolyline);tracePolyline=null;}
   _pendingPolygon=tracePoints.map(ll=>({lat:ll.lat,lng:ll.lng}));
   tracePolygon=L.polygon(tracePoints,{
-    color,weight:2,opacity:0.88,fillColor:color,fillOpacity:0.06,dashArray:'10 6'
+    color,weight:3,opacity:1,fillColor:color,fillOpacity:0.07,
+    dashArray:'10 6',className:'leaflet-trace-line'
   }).addTo(map);
   startMarchingAnts(tracePolygon);
   el('trace-overlay').classList.remove('active');
@@ -3659,20 +3676,39 @@ function deleteRegion(id){
 }
 function drawRegionLayers(){
   regionLayers.forEach(l=>map&&map.removeLayer(l)); regionLayers=[];
+  Object.values(regionBoundaryLayers).forEach(l=>map&&map.removeLayer(l)); regionBoundaryLayers={};
   regions.forEach(r=>{
-    let layer;
     if(r.polygon){
-      // Polygon regions: invisible on map, show only as zone name banner
-      layer=L.polygon(r.polygon.map(p=>[p.lat,p.lng]),{
+      // Invisible layer (zone detection only)
+      regionLayers.push(L.polygon(r.polygon.map(p=>[p.lat,p.lng]),{
         color:'transparent',weight:0,opacity:0,fillOpacity:0
-      }).addTo(map);
+      }).addTo(map));
+      // Re-add boundary layer if it was toggled on
+      if(shownBoundaries.has(r.id)) _addBoundaryLayer(r);
     } else {
-      layer=L.rectangle([[r.sw.lat,r.sw.lng],[r.ne.lat,r.ne.lng]],{
+      regionLayers.push(L.rectangle([[r.sw.lat,r.sw.lng],[r.ne.lat,r.ne.lng]],{
         color:'#4ade80',weight:1.5,opacity:0.55,fillColor:'#4ade80',fillOpacity:0.03,dashArray:'6,5'
-      }).addTo(map);
+      }).addTo(map));
     }
-    regionLayers.push(layer);
   });
+}
+function _addBoundaryLayer(r){
+  const color=getThemeMainColor();
+  regionBoundaryLayers[r.id]=L.polygon(r.polygon.map(p=>[p.lat,p.lng]),{
+    color,weight:2,opacity:0.8,fillColor:color,fillOpacity:0.04,dashArray:'8 5'
+  }).addTo(map);
+}
+function toggleRegionBoundary(id){
+  const r=regions.find(x=>x.id===id);
+  if(!r||!r.polygon) return;
+  if(shownBoundaries.has(id)){
+    shownBoundaries.delete(id);
+    if(regionBoundaryLayers[id]){map.removeLayer(regionBoundaryLayers[id]);delete regionBoundaryLayers[id];}
+  } else {
+    shownBoundaries.add(id);
+    _addBoundaryLayer(r);
+  }
+  renderRegions();
 }
 function getRegionPct(r){
   if(r.polygon){
@@ -3689,7 +3725,8 @@ function renderRegions(){
   list.innerHTML=regions.map(r=>{
     const pct=getRegionPct(r).toFixed(1);
     const sub=r.polygon?`Custom · ${r.polygon.length} pts`:`${r.sw.lat.toFixed(3)}°, ${r.sw.lng.toFixed(3)}°`;
-    return `<div class="region-card"><div><div class="region-name">${r.name}</div><div class="region-bounds">${sub}</div></div><div style="text-align:right"><div class="region-pct-label">EXPLORED</div><div class="region-pct">${pct}%</div></div><div class="region-del" onclick="deleteRegion(${r.id})">✕</div></div>`;
+    const boundaryBtn=r.polygon?`<div class="region-boundary-btn${shownBoundaries.has(r.id)?' active':''}" onclick="toggleRegionBoundary(${r.id})">· · ·</div>`:'';
+    return `<div class="region-card"><div><div class="region-name">${r.name}</div><div class="region-bounds">${sub}</div></div><div style="text-align:right"><div class="region-pct-label">EXPLORED</div><div class="region-pct">${pct}%</div></div>${boundaryBtn}<div class="region-del" onclick="deleteRegion(${r.id})">✕</div></div>`;
   }).join('');
 }
 function openRegions(){ renderZones(); renderRegions(); el('region-panel').classList.add('open'); el('backdrop').classList.add('visible'); }
