@@ -2735,13 +2735,15 @@ function navCycleLayer(){
 
 function navLoadVoices(){
   if(!window.speechSynthesis) return;
-  const lang = navSearchLang || 'en';
-  let voices = speechSynthesis.getVoices().filter(v => v.lang.toLowerCase().startsWith(lang.toLowerCase()));
-  // Fallback to all voices if none match
-  if (!voices.length) voices = speechSynthesis.getVoices().slice(0, 8);
-  if(!voices.length) return;
   const list=el('nav-voice-list');
   if(!list) return;
+  const lang = navSearchLang || 'en';
+  let voices = speechSynthesis.getVoices().filter(v => v.lang.toLowerCase().startsWith(lang.toLowerCase()));
+  if (!voices.length) voices = speechSynthesis.getVoices().slice(0, 8);
+  if(!voices.length){
+    list.innerHTML='<div style="font-family:Rajdhani,sans-serif;font-size:0.75rem;color:rgba(255,255,255,0.3);padding:4px 0">Loading voices…</div>';
+    return;
+  }
   const idx=Math.min(navVoiceIdx, voices.length-1);
   navSelectedVoice=voices[idx]||null;
   list.innerHTML=voices.slice(0,8).map((v,i)=>{
@@ -2775,18 +2777,24 @@ function navSetLanguage(lang) {
 
 if(window.speechSynthesis){
   speechSynthesis.addEventListener('voiceschanged', navLoadVoices);
-  // Android: unlock TTS on first user gesture — speak a real silent utterance and let it finish
+  // Poll for voices — Android Chrome can take several seconds to load them
+  let _voicePollCount = 0;
+  const _pollVoices = () => {
+    if(speechSynthesis.getVoices().length > 0){ navLoadVoices(); return; }
+    if(++_voicePollCount < 20) setTimeout(_pollVoices, 500);
+  };
+  setTimeout(_pollVoices, 200);
+  // Android: unlock TTS on first user gesture
   const _warmSpeech = () => {
     document.removeEventListener('touchstart', _warmSpeech);
     document.removeEventListener('click', _warmSpeech);
     const u = new SpeechSynthesisUtterance(' ');
     u.volume = 0; u.rate = 10;
-    u.onend = u.onerror = () => navLoadVoices();
+    u.onend = u.onerror = () => { navLoadVoices(); };
     speechSynthesis.speak(u);
-    // Retry voice load a few times — Android can take a moment
-    setTimeout(navLoadVoices, 500);
-    setTimeout(navLoadVoices, 1500);
-    setTimeout(navLoadVoices, 3000);
+    // Reset poll after gesture — voices may appear now
+    _voicePollCount = 0;
+    setTimeout(_pollVoices, 300);
   };
   document.addEventListener('touchstart', _warmSpeech, {once:true, passive:true});
   document.addEventListener('click', _warmSpeech, {once:true, passive:true});
